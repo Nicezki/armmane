@@ -49,3 +49,24 @@ class ConfigMane:
     def reload(self):
         self.load_config()
         print("Config reloaded.")
+
+    def loadDataSet():
+        try:
+            with open(self.dataSet, 'r') as file:
+                # Read the lines of the file, remove newline characters, and store them in an array
+                file_contents = [line.strip() for line in file]
+            return file_contents
+        except FileNotFoundError:
+            print(f"File '{self.filename}' not found.")
+            return []
+
+    def get_value(self, index=None):
+        if index is None:
+            return self.file_contents
+        elif isinstance(index, int) and 0 <= index < len(self.file_contents):
+            return self.file_contents[index]
+        else:
+            print("Invalid index.")
+            return None
+        
+
