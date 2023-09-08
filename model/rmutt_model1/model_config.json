@@ -1,0 +1,13 @@
+{
+    "model_name": "rmutt_model",
+    "model_version": "1.0",
+    "model_author": "RMUTT CPE",
+    "model_file": "rmutt_model.tflite",
+    "model_classes": ["Red Circle", "Green Circle", "Blue Circle", "Red Square", "Green Square", "Blue Square", "Red Triangle", "Green Triangle", "Blue Triangle", "No Object"],
+    "model_description": "This is a model for RMUTT CPE Arm Robot that can classify 10 classes of objects.",
+    "config":{
+        "image_width": 224,
+        "image_height": 224,
+        "threshhold" : 0.5
+    }
+}
