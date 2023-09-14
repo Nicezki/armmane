@@ -1,4 +1,5 @@
 import serial
+import serial.tools.list_ports
 class serimane():
     def __init__(self):
         # Scan for available ports. return a list of tuples (num, name)
@@ -52,12 +53,28 @@ class serimane():
     
     def getPort(self):
         return self.port
-    
-    def getBaudrate(self):
-        return self.baudrate
-    
-    def getTimeout(self):
-        return self.timeout
-    
-    def getSerial(self):
-        return self.ser
+            
+
+    def is_arduino(port):
+        try:
+            ser = serial.Serial(port)
+            ser.close()
+            return True
+        except (OSError, serial.SerialException):
+            return False
+
+        # Get a list of all available serial ports
+        available_ports = list(serial.tools.list_ports.comports())
+
+        # Filter the list to find Arduino boards
+        arduino_ports = [port[0] for port in available_ports if is_arduino(port[0])]
+
+        if arduino_ports:
+            if len(arduino_ports) == 1:
+                # Automatically select the only available Arduino port
+                selected_port = arduino_ports[0]
+                print(f"Found Arduino on port: {selected_port}")
+            else:
+                print("Multiple Arduino boards found. Please specify the port.")
+        else:
+            print("No Arduino board found on any port.")

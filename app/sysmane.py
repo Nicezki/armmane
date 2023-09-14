@@ -1,5 +1,6 @@
 import os
-import json
+import json 
+
 from loguru import logger
 try:
     # import TFmane as tfm
@@ -16,6 +17,9 @@ class SysMane:
         self.current_path = os.getcwd()
         self.app_config = cmn.ConfigMane("config.json", self.config_path)
         self.current_model = self.app_config.get("current_model")
+        self.running = {
+            "current_frame": None,
+        }
 
     def getConfig(self):
         return self.app_config
@@ -24,7 +28,7 @@ class SysMane:
         return self.current_model
     
     def getCurrentModelConfig(self):
-        return self.loadModelConfig(self.current_model)
+        return self.getModelConfig(self.current_model)
     
     def getCurrentPath(self):
         return self.current_path
@@ -42,7 +46,15 @@ class SysMane:
     def getModelConfig(self, model_name):
         model_folder = os.path.join(self.app_config.get("model_folder"), model_name)
         return cmn.ConfigMane("config.json", os.path.join(model_folder))
+    
+    def getModelPath(self,model_name):
+        return os.path.join(self.app_config.get("model_folder"), model_name, self.getCurrentModelConfig().get("model_file"))
+    
+    def setCurrentFrame(self, frame):
+        self.running["current_frame"] = frame
 
+    def getCurrentFrame(self):
+        return self.running["current_frame"]
 
     
 

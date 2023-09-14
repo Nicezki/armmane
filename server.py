@@ -53,15 +53,17 @@ sys = sysmane.SysMane()
 amn = armmane.ArmMane(sys)
 
 
-@app.get("/")
+@app.get("/info", tags=["Info"])
 async def root():
     return JSONResponse(
         status_code=200,
         content={
             "status": "success",
-            "envoriment": {
+            "model": {
                 "current_path": sys.getCurrentPath(),
                 "current_model": sys.getCurrentModel(),
+                "current_model_config": sys.getCurrentModelConfig().getAll(),
+                "current_model_path": sys.getModelPath(sys.getCurrentModel()),
                 "models": sys.listModelFolder()
             }
         }
@@ -97,6 +99,9 @@ async def model_config(model_name: str):
             "message": "Set current model to {}".format(model_name)
         }
     )
+
+
+
 
 
 @app.get("/model/{model_name}/config", tags=["Model"])
