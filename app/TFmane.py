@@ -10,7 +10,7 @@ from threading import Thread
 import importlib.util
 from loguru import logger
 
-from tensorflow.lite.python.interpreter import Interpreter
+import tensorflow as tf
 
 
 # Define VideoStream class to handle streaming of video from webcam in separate processing thread
@@ -19,7 +19,11 @@ class VideoStream:
     def __init__(self,resolution=(640,480),framerate=30):
         # Initialize the PiCamera and the camera image stream
         # for camera_index in range(3):
-        #     camera_path = f"/dev/video{camera_index}"
+
+        # if self.platform == 'Linux':
+        #     pass
+        # else:
+        #     pass
         self.stream = cv2.VideoCapture(0)
         if self.stream.isOpened():
             # print(f"Raspberry Pi camera is available at path: {camera_path}")
@@ -27,7 +31,7 @@ class VideoStream:
             logger.info("Hi")
         else:
             logger.error("No camera found")
-            sys.exit(1)
+        
         ret = self.stream.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
         ret = self.stream.set(3,resolution[0])
         ret = self.stream.set(4,resolution[1])
@@ -210,21 +214,24 @@ class TFMane:
 
         self.imageWidth = self.model_config.get("config","image_width")
         self.imageHeight = self.model_config.get("config","image_height")   
-        self.framerate = self.model_config.get("config","framerate") 
+        self.framerate = self.model_config.get("config","framerate")
+        self.platform = self.platformCheck()
 
-        self.video = VideoStream(resolution=(self.imageWidth,self.imageHeight),framerate=self.framerate).start()
+        self.video = None
         self.run()
 
     def run(self):
-        logger.info("TFMane is running")
-        # self.platformCheck()
-        # self.setup()
-        # self.loadModel()
-        # self.detect()
+         logger.info("TFMane is running")
+         logger.info("Camara index: {}".format(self.checkAvaiableCamera()))
+         self.video = VideoStream(resolution=(self.imageWidth,self.imageHeight),framerate=self.framerate).start()
+         #self.loadModel()
+         self.setup()
+         self.detect()
 
     def setup(self):
         logger.info("Loading model: {}".format(self.sysmane.getModelPath(self.sysmane.getCurrentModel())))
-        self.interpreter = Interpreter(self.sysmane.getModelPath(self.sysmane.getCurrentModel()))
+        test = os.path.join(self.sysmane.getFullModelPath(self.sysmane.getCurrentModel()),"rmutt_model.tflite")
+        self.interpreter = tf.lite.Interpreter(model_path="rmutt_model.tflite")
         self.interpreter.allocate_tensors()
         
         # Get model details
@@ -252,15 +259,31 @@ class TFMane:
             from tflite_runtime.interpreter import Interpreter
         else: 
             logger.info("Detected non-Linux system | Now using tensorflow.lite")
-            from tensorflow.lite.python.interpreter import Interpreter
+            import tensorflow as tf
+            #from tensorflow.lite.python.interpreter import Interpreter
         return system_info
     
+    def checkAvaiableCamera(self):
+        # checks the first 10 indexes.
+        index = 0
+        arr = []
+        i = 10
+        while i > 0:
+            logger.info("Trying to open camera index: {}".format(index))
+            cap = cv2.VideoCapture(index)
+            if cap.read()[0]:
+                arr.append(index)
+                cap.release()
+            index += 1
+            i -= 1
+        return arr
+        
     
     def loadModel(self):
-        logger.info("Loading model: {}".format(self.sysmane.getModelPath(self.sysmane.getCurrentModel())))
-        self.interpreter = Interpreter(self.sysmane.getModelPath(self.sysmane.getCurrentModel()))
+        logger.info("Loading model: {}".format(self.sysmane.getFullModelPath(self.sysmane.getCurrentModel())))
+        self.interpreter = tf.lite.Interpreter(self.sysmane.getFullModelPath(self.sysmane.getCurrentModel()))
         self.interpreter.allocate_tensors()
-        logger.info("Model loaded: {}".format(self.sysmane.getModelPath(self.sysmane.getCurrentModel())))
+        logger.info("Model loaded: {}".format(self.sysmane.getFullModelPath(self.sysmane.getCurrentModel())))
     
 
     def detect(self):
@@ -268,7 +291,7 @@ class TFMane:
         self.frame_rate_calc = 1
         self.freq = cv2.getTickFrequency()
         # Initialize video stream
-        time.sleep(1)
+
 
         #for frame1 in camera.capture_continuous(rawCapture, format="bgr",use_video_port=True):
         while True:

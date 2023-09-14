@@ -48,7 +48,10 @@ class SysMane:
         return cmn.ConfigMane("config.json", os.path.join(model_folder))
     
     def getModelPath(self,model_name):
-        return os.path.join(self.app_config.get("model_folder"), model_name, self.getCurrentModelConfig().get("model_file"))
+        return os.path.join(self.app_config.get("model_folder"), model_name)
+    
+    def getFullModelPath(self, model_name):
+        return os.path.join(self.current_path, self.getModelPath(model_name))
     
     def setCurrentFrame(self, frame):
         self.running["current_frame"] = frame

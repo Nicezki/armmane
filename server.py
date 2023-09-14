@@ -69,21 +69,23 @@ async def root():
         }
     )
 
-@app.get("/model", tags=["Model"])
-async def model():
+
+@app.get("/config", tags=["Config"])
+async def config():
     return JSONResponse(
         status_code=200,
         content={
             "status": "success",
-            "message": "Return list of models",
-            "models": sys.listModelFolder()
+            "message": "Return config",
+            "config": sys.getConfig().getAll()
         }
     )
 
-@app.post("/model/{model_name}/set", tags=["Model"])
-async def model_config(model_name: str):
-    # Check if model_name is in list of models
-    if model_name not in sys.listModelFolder():
+
+@app.post("/config/currentmodel/{key}", tags=["Config"])
+async def config_currentmodel(key: str):
+    # Check if key is in list of models
+    if key not in sys.listModelFolder():
         return JSONResponse(
             status_code=404,
             content={
@@ -91,17 +93,14 @@ async def model_config(model_name: str):
                 "message": "Model not found"
             }
         )
-    sys.setCurrentModel(model_name)
+    sys.setCurrentModel(key)
     return JSONResponse(
         status_code=200,
         content={
             "status": "success",
-            "message": "Set current model to {}".format(model_name)
+            "message": "Set current model to {}".format(key)
         }
     )
-
-
-
 
 
 @app.get("/model/{model_name}/config", tags=["Model"])
@@ -123,6 +122,8 @@ async def model_config(model_name: str):
             "config": sys.getModelConfig(model_name).getAll()
         }
     )
+
+
 
 # Run the server by typing this command in the terminal:
 # uvicorn server:app --reload

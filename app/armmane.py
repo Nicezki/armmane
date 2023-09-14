@@ -12,7 +12,7 @@ from app import TFmane as tfm
 class ArmMane:  
     def __init__(self,sysmane):
         self.sysmane = sysmane
-        self.tfmane = tfm.TFMane(self.sysmane)
+        # self.tfmane = tfm.TFMane(self.sysmane)
         
         # self.tfmane = tfm.TFMane(self.sysmane)
 
