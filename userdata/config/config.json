@@ -1,0 +1,141 @@
+{
+    "config_version": "1.0",
+    "model_folder": "models",
+    "current_model": "rmutt_model1",
+    "serial_buadrate": "115200",
+    "servo_count" : "5",
+    "servo_max_degree" : "180",
+    "servo_min_degree" : "0",
+    "conveyor_count" : "1",
+    "allowed_posture": [
+        [
+            {
+                "servo": "0",
+                "min": "0",
+                "max": "10"
+            },
+            {
+                "servo": "1",
+                "min": "76",
+                "max": "180"
+            },
+            {
+                "servo": "2",
+                "min": "0",
+                "max": "180"
+            },
+            {
+                "servo": "3",
+                "min": "0",
+                "max": "180"
+            },
+            {
+                "servo": "4",
+                "min": "0",
+                "max": "180"  
+            }
+        ]
+    ],
+    "instructions": {
+        "reset": {
+            "step": [
+                "C0M1S255", "C1M1S255", "S05D045", "S04D000", "S03D075", "S02D080", "S01D020", "S01D075", "S00D080"
+            ]
+        },
+        "preGrip": {
+            "step": [
+                "S00D080", "S01D075", "S02D020", "S03D030", "S04D000", "S05D040"
+            ]
+        },
+        "liftUp": {
+            "step": [
+                "S00D080", "S01D075", "S02D030", "S03D050", "S04D000", "S05D090"
+            ]
+        },
+        "dropA": {
+            "step": [
+                "S00D180", "S01D055", "S02D030", "S03D075", "S04D080", "S05D040"
+            ]
+        },
+        "dropB": {
+            "step": [
+                "S00D137", "S01D055", "S02D030", "S03D075", "S04D080", "S05D040"
+            ]
+        },
+        "dropC": {
+            "step": [
+                "S00D112", "S01D055", "S02D030", "S03D075", "S04D080", "S05D040"
+            ]
+        },
+        "pregetA": {
+            "step": [
+                "S00D180", "S01D080", "S02D000", "S03D080", "S04D000", "S05D040"
+            ]
+        },
+        "preGetB": {
+            "step": [
+                "S00D137", "S01D080", "S02D000", "S03D080", "S04D000", "S05D040"
+            ]
+        },
+        "preGetC": {
+            "step": [
+                "S00D112", "S01D080", "S02D000", "S03D080", "S04D000", "S05D040"
+            ]
+        },
+        "getA": {
+            "step": [
+                "S00D180", "S01D080", "S02D000", "S03D050", "S04D000", "S05D090"
+            ]
+        },
+        "getB": {
+            "step": [
+                "S00D137", "S01D080", "S02D000", "S03D050", "S04D000", "S05D090"
+            ]
+        },
+        "getC": {
+            "step": [
+                "S00D112", "S01D080", "S02D000", "S03D050", "S04D000", "S05D090"
+            ]
+        },
+        "postGetA": {
+            "step": [
+                "S00D180", "S01D080", "S02D000", "S03D050", "S04D000", "S05D040"
+            ]
+        },
+        "postGetB": {
+            "step": [
+                "S00D137", "S01D080", "S02D000", "S03D050", "S04D000", "S05D040"
+            ]
+        },
+        "postGetC": {
+            "step": [
+                "S00D112", "S01D080", "S02D000", "S03D050", "S04D000", "S05D040"
+            ]
+        },
+        "prePreDropBelt": {
+            "step": [
+                "S05D090", "S04D000", "S03D080", "S02D030", "S01D060", "S00D000"
+            ]
+        },
+        "preDropBelt": {
+            "step": [
+                "S05D090", "S04D000", "S03D080", "S02D030", "S01D051", "S00D000"
+            ]
+        },
+        "dropBelt": {
+            "step": [
+                "S05D040", "S04D000", "S03D080", "S02D030", "S01D051", "S00D000"
+            ]
+        },
+        "grip":{
+            "step": [
+                "S05D090"
+            ]
+        },
+        "open":{
+            "step": [
+                "S05D045"
+            ]
+        }
+        }
+}

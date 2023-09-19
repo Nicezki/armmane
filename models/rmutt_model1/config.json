@@ -1,0 +1,21 @@
+{
+    "model_name": "RMUTT CPE Desuyo",
+    "model_version": "1.0",
+    "model_author": "RMUTT CPE",
+    "model_file": "rmutt_model.tflite",
+    "model_classes": [
+        "Gun",
+        "Triangle",
+        "toy_Car"
+
+    ],
+    "model_description": "This is a model for RMUTT CPE Arm Robot that can classify 10 classes of objects.",
+    "config":{
+        "image_width": 1280,
+        "image_height": 720,
+        "min_conf_threshold": 0.5,
+        "input_mean": 127.5,
+        "input_std": 127.5,
+        "framerate": 30
+    }
+}
