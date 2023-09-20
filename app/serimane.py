@@ -53,7 +53,6 @@ class SeriMane:
             # Retry to find Arduino
             self.arduino = None
 
-
     def prepare(self):
         self.checkCurrentState()
         self.checkBusy()
@@ -61,27 +60,42 @@ class SeriMane:
         self.obstacle_thread = threading.Thread(target=self.detectObstacle)
         self.obstacle_thread.daemon = True
         self.obstacle_thread.start()
+        self.sensor_thread = threading.Thread(target=self.timeCount)
+        self.sensor_thread.daemon = True
+        self.sensor_thread.start()
 
-    # def timeCount(self):
-    #     time.sleep(5)
-
-            
-
+    def timeCount(self):
+        time.sleep(5)
+        if self.sensorcheck != True:
+            time.sleep(5)
+            self.log("No sensor found, please find one for me pretty please >,< ")
+            self.sensorcheck == True
+        else:
+            self.sensor_thread.join()
         
-    #     print("hi")
-
     def detectObstacle(self):
         while True:
             # Read the digital value from the obstacle sensor
-            sensor_value = GPIO.input(self.sensor_pin)
-
-            if sensor_value == GPIO.HIGH:
-                self.log("No obstacle detected")
+            if self.sensorcheck == None or self.sensorcheck == True :
+                counterout = 0
+                sensor_value = GPIO.input(self.sensor_pin)
+                if sensor_value == GPIO.HIGH:
+                    self.log("No obstacle detected")
+                    counterout = counterout+1
+                    if counterout == 10:
+                        counterout = 0
+                        self.sensorcheck = False
+                        self.sensor_thread = threading.Thread(target=self.timeCount)
+                        self.sensor_thread.daemon = True
+                        self.sensor_thread.start()
+                else:
+                    self.log("Obstacle detected")
+                    self.sensorcheck = True
+                time.sleep(0.5)  # Adjust the sleep time as needed
             else:
-                self.log("Obstacle detected")
-            time.sleep(0.5)  # Adjust the sleep time as needed
-        
-        
+                logger.error("No sensor")
+                time.sleep(0.5)
+            
     def log(self, message, status=None, level="info"):
         # Store the status
         if status:
