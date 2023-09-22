@@ -187,6 +187,17 @@ async def status_arm():
             "status_arm": seri.getCurrentStatus()
         }
     )
+
+@app.get("/status/prediction", tags=["Status"], description="Return current status of prediction confident, class, fps.")
+async def status_arm():
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Return status of predict",
+            "status_prediction": sys.getCurrentResult()
+        }
+    )
     
 @app.get("/command/servo/{servo}/{angle}", tags=["Command Deprecated"], description="Set servo to desired angle")
 @app.post("/command/servo/{servo}/{angle}", tags=["Command"], description="Set servo to desired angle")
@@ -316,6 +327,7 @@ async def command_reset():
 async def event_generator(request: Request):
     last_status = None
     while True:
+
         current_status = seri.getCurrentStatus()
         # If client closes connection, stop sending events
         if await request.is_disconnected():

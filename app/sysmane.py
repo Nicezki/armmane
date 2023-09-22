@@ -81,8 +81,7 @@ class SysMane:
         self.running["detect_flag"] = flag
     
     def getCurrentResult(self):
-        return self.running["current_confident_score"], self.running["current_classes"], self.running["fps"], self.running["detect_flag"]
-    
+        return self.running
 
     
 

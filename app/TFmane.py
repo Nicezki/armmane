@@ -224,8 +224,7 @@ class TFMane:
             self.current_status['result_frame'] = frame
 
             # All the results have been drawn on the frame, so it's time to display it.
-            cv2.imshow('Object detector', frame)
-
+            # cv2.imshow('Object detector', frame)
             # Press 'q' to quit
             if cv2.waitKey(1) == ord('q'):
             #f self.close :
