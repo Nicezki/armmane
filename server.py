@@ -1,9 +1,26 @@
 from app import armmane
 from app import sysmane
-from fastapi import FastAPI
+from app import serimane
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
+from loguru import logger
+import json
+# SSE
+import asyncio
+from sse_starlette.sse import EventSourceResponse
+
+import sys
+
+
+
+port = 8000
+
+STREAM_DELAY = 1  # second
+RETRY_TIMEOUT = 15000  # milisecond
+
+
 description = """
 ArmMane is a Robot Arm Management System that can use to control robot arm
 
@@ -18,6 +35,26 @@ tags_metadata = [
         "name": "Model",
         "description": "Model management",
     },
+    {
+        "name": "Config",
+        "description": "Config management",
+    },
+    {
+        "name": "Status",
+        "description": "Status management",
+    },
+    {
+        "name": "Command",
+        "description": "Command management",
+    },
+    {
+        "name": "Info",
+        "description": "Info management",
+    },
+    {
+        "name": "Server Sent Event",
+        "description": "Server Sent Event management",
+    }
 ]
 
 app = FastAPI(
@@ -41,6 +78,7 @@ origins = [
     'http://localhost:8080',
     'https://design.nicezki.com',
 ]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -51,7 +89,9 @@ app.add_middleware(
 
 sys = sysmane.SysMane()
 amn = armmane.ArmMane(sys)
+seri = serimane.SeriMane(sys)
 
+last_status = {}
 
 @app.get("/info", tags=["Info"])
 async def root():
@@ -70,19 +110,32 @@ async def root():
     )
 
 
-@app.get("/config", tags=["Config"])
+@app.get("/config", tags=["Config"], description="Return user config data used in ArmMane")
 async def config():
     return JSONResponse(
         status_code=200,
         content={
             "status": "success",
             "message": "Return config",
-            "config": sys.getConfig().getAll()
+            "config": sys.app_config.getAll()
+        }
+    )
+
+@app.get("/config/reload", tags=["Config"], description="Reload user config data used in ArmMane")
+async def config_reload():
+    sys.reloadConfig()
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Reload config",
+            "config": sys.app_config.getAll()
         }
     )
 
 
-@app.post("/config/currentmodel/{key}", tags=["Config"])
+@app.get("/config/currentmodel", tags=["Config Deprecated"], description="Set model that will be used in ArmMane object detection")
+@app.post("/config/currentmodel/{key}", tags=["Config"], description="Set model that will be used in ArmMane object detection")
 async def config_currentmodel(key: str):
     # Check if key is in list of models
     if key not in sys.listModelFolder():
@@ -103,7 +156,7 @@ async def config_currentmodel(key: str):
     )
 
 
-@app.get("/model/{model_name}/config", tags=["Model"])
+@app.get("/model/{model_name}/config", tags=["Model"], description="Return config of the model")
 async def model_config(model_name: str):
     # Check if model_name is in list of models
     if model_name not in sys.listModelFolder():
@@ -124,8 +177,6 @@ async def model_config(model_name: str):
     )
 
 
-<<<<<<< HEAD
-=======
 @app.get("/status/arm", tags=["Status"], description="Return current status of arm like servo angle, conveyor mode, etc.")
 async def status_arm():
     return JSONResponse(
@@ -134,6 +185,17 @@ async def status_arm():
             "status": "success",
             "message": "Return status of arm",
             "status_arm": seri.getCurrentStatus()
+        }
+    )
+
+@app.get("/status/prediction", tags=["Status"], description="Return current status of prediction confident, class, fps.")
+async def status_arm():
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Return status of predict",
+            "status_prediction": sys.getCurrentResult()
         }
     )
     
@@ -265,6 +327,7 @@ async def command_reset():
 async def event_generator(request: Request):
     last_status = None
     while True:
+
         current_status = seri.getCurrentStatus()
         # If client closes connection, stop sending events
         if await request.is_disconnected():
@@ -293,7 +356,6 @@ async def sse_status_stream(request: Request):
 
 
 
->>>>>>> parent of d9e1c9f (did something)
 
 # Run the server by typing this command in the terminal:
 # uvicorn server:app --reload

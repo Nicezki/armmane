@@ -63,9 +63,10 @@ class ConfigMane:
             print("Config file deleted.")
         else:
             print("Config file does not exist.")
+            
 
     def reload(self):
-        self.load_config()
+        self.loadConfig()
         print("Config reloaded.")
 
 

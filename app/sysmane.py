@@ -19,10 +19,19 @@ class SysMane:
         self.current_model = self.app_config.get("current_model")
         self.running = {
             "current_frame": None,
+            "current _result": None,
+            "confident_score" : 0,
+            "current_classes" : "",
+            "detect_flag" : False,
+            "fps" : 0
         }
 
     def getConfig(self):
         return self.app_config
+    
+    def reloadConfig(self):
+        self.app_config.reload()
+        logger.info("Reload user config")
     
     def getCurrentModel(self):
         return self.current_model
@@ -48,7 +57,7 @@ class SysMane:
         return cmn.ConfigMane("config.json", os.path.join(model_folder))
     
     def getModelPath(self,model_name):
-        return os.path.join(self.app_config.get("model_folder"), model_name)
+        return os.path.join(self.app_config.get("model_folder"), model_name, self.getModelConfig(model_name).get("model_file"))
     
     def getFullModelPath(self, model_name):
         return os.path.join(self.current_path, self.getModelPath(model_name))
@@ -58,8 +67,6 @@ class SysMane:
 
     def getCurrentFrame(self):
         return self.running["current_frame"]
-<<<<<<< HEAD
-=======
     
     def setCurrentResultFrame(self, result):
         self.running["current_result"] = result
@@ -74,9 +81,7 @@ class SysMane:
         self.running["detect_flag"] = flag
     
     def getCurrentResult(self):
-        return self.running["current_confident_score"], self.running["current_classes"], self.running["fps"], self.running["detect_flag"]
-    
->>>>>>> parent of d9e1c9f (did something)
+        return self.running
 
     
 
