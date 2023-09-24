@@ -348,11 +348,14 @@ class TFMane:
             # All the results have been drawn on the frame, so it's time to display it.
             cv2.imshow('Object detector', frame)
 
+<<<<<<< HEAD
             # Calculate framerate
             t2 = cv2.getTickCount()
             time1 = (t2-t1)/self.freq
             frame_rate_calc= 1/time1
 
+=======
+>>>>>>> parent of d9e1c9f (did something)
             # Press 'q' to quit
             if cv2.waitKey(1) == ord('q'):
                 break

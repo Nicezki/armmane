@@ -7,6 +7,10 @@
         "Gun",
         "Triangle",
         "toy_Car"
+<<<<<<< HEAD
+=======
+
+>>>>>>> parent of d9e1c9f (did something)
     ],
     "model_description": "This is a model for RMUTT CPE Arm Robot that can classify 10 classes of objects.",
     "config":{

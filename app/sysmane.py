@@ -58,6 +58,25 @@ class SysMane:
 
     def getCurrentFrame(self):
         return self.running["current_frame"]
+<<<<<<< HEAD
+=======
+    
+    def setCurrentResultFrame(self, result):
+        self.running["current_result"] = result
+    
+    def getCurrentFrame(self):
+        return self.running["current_result"]
+
+    def setCurrentResult(self,confident_score, classes, fps, flag):
+        self.running["current_confident_score"] = confident_score
+        self.running["current_classes"] = classes
+        self.running["fps"] = fps
+        self.running["detect_flag"] = flag
+    
+    def getCurrentResult(self):
+        return self.running["current_confident_score"], self.running["current_classes"], self.running["fps"], self.running["detect_flag"]
+    
+>>>>>>> parent of d9e1c9f (did something)
 
     
 
