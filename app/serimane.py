@@ -2,6 +2,7 @@ import serial
 import serial.tools.list_ports
 import threading
 from loguru import logger
+import platform
 import RPi.GPIO as GPIO
 import time
 
@@ -23,6 +24,7 @@ class SeriMane:
             "message" : "Initualizing Arduino connection"
         }
         self.sensor = None
+        sensorcheck = None
         self.arduino_port = None
         self.arduino = None
         while not self.arduino_port and self.arduino is None:
@@ -46,7 +48,7 @@ class SeriMane:
         if self.arduino_port:
             self.log("Arduino found on port: " + str(self.arduino_port), "Found", "success")
             self.log("Connecting to Arduino with baudrate: " + str(self.sysmane.app_config.get("serial_buadrate")), "Connecting", "debug")
-            self.arduino = serial.Serial(self.arduino_port, self.sysmane.app_config.get("serial_buadrate"), timeout=1)
+            self.arduino = serial.Serial(self.arduino_port, self.sysmane.app_config.get("serial_buadrate"), timeout=1)   
             self.log("Connected to Arduino", "Connected", "success")
         else:
             self.log("Arduino not found Trying again in 1 second", "Not found", "warning")

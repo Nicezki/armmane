@@ -1,3 +1,8 @@
+# Run the server by typing this command in the terminal:
+# python -m uvicorn server:app --reload
+
+
+
 from app import armmane
 from app import sysmane
 from app import serimane
@@ -358,4 +363,4 @@ async def sse_status_stream(request: Request):
 
 
 # Run the server by typing this command in the terminal:
-# uvicorn server:app --reload
+# python -m uvicorn server:app --reload
