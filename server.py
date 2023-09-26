@@ -12,6 +12,7 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 from loguru import logger
 import json
+import copy
 # SSE
 import asyncio
 from sse_starlette.sse import EventSourceResponse
@@ -96,7 +97,6 @@ sys = sysmane.SysMane()
 amn = armmane.ArmMane(sys)
 seri = serimane.SeriMane(sys)
 
-last_status = {}
 
 @app.get("/info", tags=["Info"])
 async def root():
@@ -267,7 +267,7 @@ async def command_conv(conv: int, mode: int = 0, speed: int = 255):
         status_code=200,
         content={
             "status": "success",
-            "message": "Set conv {} to {}".format(conv, mode)
+            "message": "Set conv {} to {} with speed {}".format(conv, mode, speed)
         }
     )
 
@@ -330,22 +330,33 @@ async def command_reset():
     )
 
 async def event_generator(request: Request):
-    last_status = None
+    last_status = {}
+    yield {
+        # Send connected message to client
+        "data": json.dumps({"status": "connected"})
+    }
     while True:
-
-        current_status = seri.getCurrentStatus()
         # If client closes connection, stop sending events
         if await request.is_disconnected():
             break
-        # If client reconnects or status changes, send current_status to client
-        # if current_status != last_status:
-        yield {
-            "event": "arm_status",
-            "data": json.dumps(current_status)
-        }
-        last_status = current_status
-        await asyncio.sleep(0.1)
+        # Check if status changed
+        current_status = seri.getCurrentStatus()
+        # print("current_status")
+        # print(current_status['servo'])
+        # print("last_status")
+        # print(last_status['servo'])
         
+        # Compare individual keys and values
+        if last_status != current_status:
+            # If client reconnects or status changes, send current_status to client
+            last_status = copy.deepcopy(current_status)
+            yield {
+                "event": "arm_status",
+                "data": json.dumps(current_status)
+            }
+
+        await asyncio.sleep(0.1)
+
 
 @app.get('/sse/status', tags=["Server Sent Event"], description="Server Sent Event to send arm status to client")
 async def sse_status_stream(request: Request):

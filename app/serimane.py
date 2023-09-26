@@ -19,6 +19,7 @@ class SeriMane:
                 'mode' : [0,0],
                 'speed' : [0,0]
             },
+            "statuscode" : "PS00D000S01D000S02D000S03D000S04D000S05D000C0M0S000C1M0S000",
             "instruction" : None,
             "status" : "Initualizing",
             "message" : "Initualizing Arduino connection"
@@ -200,13 +201,13 @@ class SeriMane:
                     continue
                 if line.startswith("PS")or line.startswith("PF"):
                     self.current_status["instruction"] = self.extractInstruction(line)
+                    self.current_status["statuscode"] = line
                 else: self.log(f"{line}", "Arduino", "debug")
             else:
                 self.log("Arduino not found, cannot receive message.", "Error", "trace")
                 return None
                 
     def checkCurrentState(self):
-        
         self.sendMessageToArduino("PC")
         
     def checkBusy(self):
