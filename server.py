@@ -234,11 +234,42 @@ async def command_servo(servo: int, angle: int):
             "message": "Set servo {} to {}".format(servo, angle)
         }
     )
+
+
+@app.get("/command/conv/{conv}/{mode}/{speed}", tags=["Command Deprecated"], description="Set conveyor to desired mode with speed")
+@app.post("/command/conv/{conv}/{mode}/{speed}", tags=["Command"], description="Set conveyor to desired mode with speed")
+async def command_conv(conv: int, mode: int = 0, speed: int = 255):
+    if mode == -1 and speed == -1:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "error",
+                "message": "Mode or speed must be set"
+            }
+        )
+    
+    if mode == -1:
+        seri.setConveyor(conveyor=conv, speed=speed)
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "success",
+                "message": "Set conv {} to speed {}".format(conv, speed)
+            }
+        )
+    
+    if speed == -1:
+        seri.setConveyor(conveyor=conv, mode=mode)
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "success",
+                "message": "Set conv {} to mode {}".format(conv, mode)
+            }
+        )
     
 
-@app.get("/command/conv/{conv}/{mode}/{speed}", tags=["Command Deprecated"], description="Set conveyor to desired mode")
-@app.post("/command/conv/{conv}/{mode}/{speed}", tags=["Command"], description="Set conveyor to desired mode")
-async def command_conv(conv: int, mode: int = 0, speed: int = 255):
+
     # Check if conv is less than 0 or more than conveyor_count
     if conv < 0 or conv > int(sys.app_config.get("conveyor_count")):
         return JSONResponse(
@@ -363,17 +394,6 @@ async def event_generator(request: Request):
 @app.get('/sse/status', tags=["Server Sent Event"], description="Server Sent Event to send arm status to client")
 async def sse_status_stream(request: Request):
     return EventSourceResponse(event_generator(request))
-    
-    
-    
-        
-        
-        
-    
-    
-
-
-
 
 # Run the server by typing this command in the terminal:
 # python -m uvicorn server:app --reload

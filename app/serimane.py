@@ -19,13 +19,17 @@ class SeriMane:
                 'mode' : [0,0],
                 'speed' : [0,0]
             },
+            'sensor' : {
+                'init' : None,
+                'available' : False,
+                'value' : False
+            },
             "statuscode" : "PS00D000S01D000S02D000S03D000S04D000S05D000C0M0S000C1M0S000",
             "instruction" : None,
             "status" : "Initualizing",
             "message" : "Initualizing Arduino connection"
         }
         self.sensor = None
-        sensorcheck = None
         self.arduino_port = None
         self.arduino = None
         while not self.arduino_port and self.arduino is None:
@@ -69,31 +73,34 @@ class SeriMane:
 
     def timeCount(self):
         time.sleep(5)
-        if self.sensorcheck != True:
+        if self.current_status["sensor"]["init"] != True:
             time.sleep(5)
             self.log("No sensor found, please find one for me pretty please >,< ")
-            self.sensorcheck == True
+            self.current_status["sensor"]["init"] == True
         else:
             self.sensor_thread.join()
         
     def detectObstacle(self):
         while True:
             # Read the digital value from the obstacle sensor
-            if self.sensorcheck == None or self.sensorcheck == True :
+            if self.current_status["sensor"]["init"] == None or self.current_status["sensor"]["init"] == True :
                 counterout = 0
                 sensor_value = GPIO.input(self.sensor_pin)
                 if sensor_value == GPIO.HIGH:
                     self.log("No obstacle detected")
+                    self.current_status["sensor"]["value"] = False
                     counterout = counterout+1
                     if counterout == 10:
                         counterout = 0
-                        self.sensorcheck = False
+                        self.current_status["sensor"]["init"] = False
                         self.sensor_thread = threading.Thread(target=self.timeCount)
                         self.sensor_thread.daemon = True
                         self.sensor_thread.start()
                 else:
                     self.log("Obstacle detected")
-                    self.sensorcheck = True
+                    self.current_status["sensor"]["init"] = True 
+                    self.current_status["sensor"]["available"] = True
+                    self.current_status["sensor"]["value"] = True
                 time.sleep(0.5)  # Adjust the sleep time as needed
             else:
                 logger.error("No sensor")
@@ -199,7 +206,7 @@ class SeriMane:
                     self.current_status["busy"] = False
                     self.log("Arduino is not busy.", "Ready", "success")
                     continue
-                if line.startswith("PS")or line.startswith("PF"):
+                if line.startswith("PS") or line.startswith("PF"):
                     self.current_status["instruction"] = self.extractInstruction(line)
                     self.current_status["statuscode"] = line
                 else: self.log(f"{line}", "Arduino", "debug")
@@ -269,7 +276,15 @@ class SeriMane:
         # Send the instruction to Arduino with PIS(Servo)D(Degree)
         self.sendMessageToArduino(f"PIS{servo}D{degree}")
 
-    def setConveyor(self, conveyor, mode, speed=255):
+    def setConveyor(self, conveyor, mode=None, speed=None):
+        if mode is None and speed is None:
+            self.log(f"Conveyor {conveyor} is not set", "Error", "error")
+            return None
+        if mode is None:
+            mode = self.current_status["conv"]["mode"][conveyor]
+        if speed is None:
+            speed = self.current_status["conv"]["speed"][conveyor]
+            
         # Check if the conveyor is in range
         if conveyor < 0 or conveyor > int(self.sysmane.app_config.get("conveyor_count")):
             self.log(f"Conveyor {conveyor} not in range (0, {self.sysmane.app_config.get('conveyor_count')})", "Error", "error")
