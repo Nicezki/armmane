@@ -1,5 +1,7 @@
 # Run the server by typing this command in the terminal:
 # python -m uvicorn server:app --reload
+# For local testing, use
+# python -m uvicorn server:app --reload --host 0.0.0.0 --port 5000 --ssl-keyfile=./certs/site-key.pem --ssl-certfile=./certs/site-cert.pem  
 
 
 
