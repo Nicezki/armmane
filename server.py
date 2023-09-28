@@ -8,6 +8,7 @@
 from app import armmane
 from app import sysmane
 from app import serimane
+from app import TFmane
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
@@ -98,6 +99,7 @@ app.add_middleware(
 sys = sysmane.SysMane()
 amn = armmane.ArmMane(sys)
 seri = serimane.SeriMane(sys)
+tmn = TFmane.TFMane(sys)
 
 
 @app.get("/info", tags=["Info"])
@@ -196,7 +198,7 @@ async def status_arm():
     )
 
 @app.get("/status/prediction", tags=["Status"], description="Return current status of prediction confident, class, fps.")
-async def status_arm():
+async def status_prediction():
     return JSONResponse(
         status_code=200,
         content={
@@ -383,6 +385,8 @@ async def event_generator(request: Request):
         if last_status != current_status:
             # If client reconnects or status changes, send current_status to client
             last_status = copy.deepcopy(current_status)
+            print (f"current_status: {id(current_status)}")
+            print (f"last_status: {id(last_status)}")
             yield {
                 "event": "arm_status",
                 "data": json.dumps(current_status)
@@ -397,3 +401,40 @@ async def sse_status_stream(request: Request):
 
 # Run the server by typing this command in the terminal:
 # python -m uvicorn server:app --reload
+
+
+async def video_generator(request: Request):
+    last_status = {}
+    yield {
+        # Send connected message to client
+        "data": json.dumps({"status": "connected"})
+    }
+    while True:
+        # If client closes connection, stop sending events
+        if await request.is_disconnected():
+            break
+        # Check if status changed
+        current_status = sys.getCurrentResult()
+        # print("current_status")
+        # print(current_status['servo'])
+        # print("last_status")
+        # print(last_status['servo'])
+        
+        # Compare individual keys and values
+        if last_status != current_status:
+            # If client reconnects or status changes, send current_status to client
+            last_status = copy.deepcopy(current_status)
+            print (f"current_status: {id(current_status)}")
+            print (f"last_status: {id(last_status)}")
+            yield {
+                "event": "prediction",
+                "data": json.dumps(current_status)
+            }
+
+        await asyncio.sleep(0.5)
+
+
+@app.get('/sse/videostream', tags=["Server Sent Event"], description="Server Sent Event to send video stream to client")
+async def sse_video_stream(request: Request):
+    return EventSourceResponse(video_generator(request))
+

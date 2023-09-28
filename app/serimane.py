@@ -68,7 +68,6 @@ class SeriMane:
         self.obstacle_thread.daemon = True
         self.obstacle_thread.start()
         self.sensor_thread = threading.Thread(target=self.timeCount)
-        self.sensor_thread.daemon = True
         self.sensor_thread.start()
 
     def timeCount(self):
@@ -77,8 +76,8 @@ class SeriMane:
             time.sleep(5)
             self.log("No sensor found, please find one for me pretty please >,< ")
             self.current_status["sensor"]["init"] == True
-        else:
-            self.sensor_thread.join()
+        # else:
+            # self.sensor_thread.join()
         
     def detectObstacle(self):
         while True:
@@ -94,7 +93,6 @@ class SeriMane:
                         counterout = 0
                         self.current_status["sensor"]["init"] = False
                         self.sensor_thread = threading.Thread(target=self.timeCount)
-                        self.sensor_thread.daemon = True
                         self.sensor_thread.start()
                 else:
                     self.log("Obstacle detected")

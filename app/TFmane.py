@@ -1,13 +1,14 @@
 # Import packages
-import os
+# import os
 import json
 import platform
 import cv2
+import base64
 import numpy as np
-import sys
+# import sys
 import time
-from threading import Thread
-import importlib.util
+import threading
+# import importlib.util
 from loguru import logger
 
 system_info = platform.system()
@@ -25,14 +26,6 @@ class VideoStream:
     def __init__(self,resolution=(640,480),framerate=30):
         # Initialize the PiCamera and the camera image stream
         self.stream = cv2.VideoCapture(0)
-        if self.stream.isOpened():
-            logger.info("Hi")
-        else:
-            logger.error("No camera found")
-        
-        ret = self.stream.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-        ret = self.stream.set(3,resolution[0])
-        ret = self.stream.set(4,resolution[1])
             
         # Read first frame from the stream
         (self.grabbed, self.frame) = self.stream.read()
@@ -42,7 +35,7 @@ class VideoStream:
 
     def start(self):
 	# Start the thread that reads frames from the video stream
-        Thread(target=self.update,args=()).start()
+        threading.Thread(target=self.update,args=()).start()
         return self
 
     def update(self):
@@ -84,10 +77,9 @@ class TFMane:
         self.camera =[]
 
         self.current_status = {
-            "frame" : None,
+            "current_result": None,
             "confident_score" : 0,
-            "classes" : "",
-            "result_frame" : None,
+            "current_classes" : "",
             "detect_flag" : False,
             "fps" : 0
         }
@@ -104,7 +96,9 @@ class TFMane:
            
          else: 
             self.setup()
-            self.detect()
+            self.detect_thread = threading.Thread(target=self.detect)
+            self.detect_thread.daemon = True
+            self.detect_thread.start()
 
     def setup(self):
         logger.info("Loading model: {}".format(self.sysmane.getModelPath(self.sysmane.getCurrentModel())))
@@ -143,11 +137,10 @@ class TFMane:
             i -= 1
         return arr
     
-    def getcurrentStatus(self):
-        return self.current_status
-    
-    def closeDetect(self):
-        self.close = True
+    # def closeDetect(self):
+    #     if self.close:
+    #         return True
+    #     return False
         
     def detect(self):
         self.close = False
@@ -168,7 +161,7 @@ class TFMane:
 
             # Acquire frame and resize to expected shape [1xHxWx3]
             frame = frame1.copy()
-            self.current_status['frame'] = frame
+            # Encode the frame as JPEG
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame_resized = cv2.resize(frame_rgb, (self.width, self.height))
             input_data = np.expand_dims(frame_resized, axis=0)
@@ -185,11 +178,9 @@ class TFMane:
             boxes = self.interpreter.get_tensor(self.output_details[self.boxes_idx]['index'])[0] # Bounding box coordinates of detected objects
             classes = self.interpreter.get_tensor(self.output_details[self.classes_idx]['index'])[0] # Class index of detected objects
             scores = self.interpreter.get_tensor(self.output_details[self.scores_idx]['index'])[0] # Confidence of detected objects
-            
             # Loop over all detections and draw detection box if confidence is above minimum threshold
             for i in range(len(scores)):
-                if ((scores[i] >  self.model_config.get("config","min_conf_threshold")) and (scores[i] <= 1.0)):
-                    self.current_status['detect_flag'] = True
+                if ((scores[i] > self.model_config.get("config","min_conf_threshold")) and (scores[i] <= 1.0)):
                     # Get bounding box coordinates and draw box
                     # Interpreter can return coordinates that are outside of image dimensions, need to force them to be within image using max() and min()
                     ymin = int(max(1,(boxes[i][0] * self.imageHeight)))
@@ -201,7 +192,7 @@ class TFMane:
 
                     # Draw label
                     object_name = self.labels[int(classes[i])] # Look up object name from "labels" array using class index
-                    self.current_status['classes'] = object_name
+                    self.current_status['current_classes'] = object_name
                     persent_scores  = int(scores[i]*100)# 0.72 to 72%'
                     self.current_status['confident_score'] = persent_scores
                     label = '%s: %d%%' % (object_name, persent_scores) # Example: 'person: 72%'
@@ -210,9 +201,6 @@ class TFMane:
                     cv2.rectangle(frame, (xmin, label_ymin-labelSize[1]-10), (xmin+labelSize[0], label_ymin+baseLine-10), (255, 255, 255), cv2.FILLED) # Draw white box to put label text in
                     cv2.putText(frame, label, (xmin, label_ymin-7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2) # Draw label text
                 
-                else:
-                    self.current_status['detect_flag'] = False
-
             # Calculate framerate
             t2 = cv2.getTickCount()
             time1 = (t2-t1)/freq
@@ -221,14 +209,18 @@ class TFMane:
 
             # Draw framerate in corner of frame
             cv2.putText(frame,'FPS: {0:.2f}'.format(frame_rate_calc),(30,50),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,0),2,cv2.LINE_AA)
-            self.current_status['result_frame'] = frame
+            _, png_result = cv2.imencode(".jpg", frame)
+            base64_result = base64.b64encode(png_result).decode("utf-8")
+            self.current_status['current_result'] = base64_result
+            self.sysmane.setCurrentResult(self.current_status)
 
+            time.sleep(0.33)
             # All the results have been drawn on the frame, so it's time to display it.
             # cv2.imshow('Object detector', frame)
             # Press 'q' to quit
-            if cv2.waitKey(1) == ord('q'):
-            #f self.close :
-                break
+            # if cv2.waitKey(1) == ord('q'):
+            #if self.closeDetect():
+                # break
         # Clean up
-        cv2.destroyAllWindows()
-        self.video.stop()
+        # destroyAllWindows()
+        # self.video.stop()

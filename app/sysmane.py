@@ -3,10 +3,10 @@ import json
 
 from loguru import logger
 try:
-    # import TFmane as tfm
+    #import TFmane as tfm
     import conmane as cmn
 except:
-    # from app import TFmane as tfm
+    #from app import TFmane as tfm
     from app import conmane as cmn
 
 class SysMane:
@@ -18,8 +18,7 @@ class SysMane:
         self.app_config = cmn.ConfigMane("config.json", self.config_path)
         self.current_model = self.app_config.get("current_model")
         self.running = {
-            "current_frame": None,
-            "current _result": None,
+            "current_result": None,
             "confident_score" : 0,
             "current_classes" : "",
             "detect_flag" : False,
@@ -82,6 +81,9 @@ class SysMane:
     
     def getCurrentResult(self):
         return self.running
+
+    def setCurrentResult(self, result):
+        self.running = result
 
     
 
