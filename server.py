@@ -16,10 +16,11 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 import json
 import copy
+import cv2
 # SSE
 import asyncio
 from sse_starlette.sse import EventSourceResponse
-
+from starlette.responses import StreamingResponse
 import sys
 
 
@@ -438,3 +439,104 @@ async def video_generator(request: Request):
 async def sse_video_stream(request: Request):
     return EventSourceResponse(video_generator(request))
 
+
+
+@app.get("/stream/video", tags=["StreamingResponse"], description="Better way to get the video stream from ARMMANE camera")
+async def get_video_stream():
+    def generate():
+        while True:
+            frame = tmn.video.read()
+
+            # encode the frame in JPEG format
+            (flag, encodedImage) = cv2.imencode(".jpg", frame)
+            # ensure the frame was successfully encoded
+            if not flag:
+                continue
+            # yield the output frame in the byte format
+            yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' +
+                bytearray(encodedImage) + b'\r\n')
+            
+
+    return StreamingResponse(generate(), media_type="multipart/x-mixed-replace; boundary=frame")
+
+
+@app.get("/stream/video2", tags=["StreamingResponse"], description="Better way to get the video stream from ARMMANE camera (with prediction)")
+async def get_video_stream():
+    def generate():
+        while True:
+            t1 = cv2.getTickCount()
+            frame = tmn.video.read()
+
+            # From tfm:
+            # self.current_status['box'] = {
+            #     "box-1": {
+            #         "xmin": xmin,
+            #         "ymin": ymin,
+            #         "xmax": xmax,
+            #         "ymax": ymax,
+            #         "label": label,
+            #         "labelSize": labelSize,
+            #         "baseLine": baseLine,
+            #         "label_ymin": label_ymin,
+            #         "object_name": object_name,
+            #         "persent_scores": persent_scores
+            #     },
+            #     "box-2": {
+            #    ...
+            #     }
+            
+
+            status = sys.getCurrentResult()
+            box = status['box']
+
+            # Add box to frame if box is not empty
+            if box:
+                for key, value in box.items():
+                    xmin = value['xmin']
+                    ymin = value['ymin']
+                    xmax = value['xmax']
+                    ymax = value['ymax']
+                    label = value['label']
+                    labelSize = value['labelSize']
+                    baseLine = value['baseLine']
+                    label_ymin = value['label_ymin']
+                    object_name = value['object_name']
+                    persent_scores = value['persent_scores']
+                    label = '%s: %d%%' % (object_name, persent_scores)
+                    # Draw box
+                    # cv2.rectangle(frame, (xmin,ymin), (xmax,ymax), (10, 255, 0), 2)
+                    #cv2.rectangle(frame, (xmin, label_ymin-labelSize[1]-10), (xmin+labelSize[0], label_ymin+baseLine-10), (255, 255, 255), cv2.FILLED) # Draw white box to put label text in
+                    #cv2.putText(frame, label, (xmin, label_ymin-7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2) # Draw label text
+
+                    # Draw box
+                    cv2.rectangle(frame, (xmin,ymin), (xmax,ymax), (10, 255, 0), 2)
+                    cv2.rectangle(frame, (xmin, label_ymin-labelSize[1]-10), (xmin+labelSize[0], label_ymin+baseLine-10), (255, 255, 255), cv2.FILLED) # Draw white box to put label text in
+                    cv2.putText(frame, label, (xmin, label_ymin-7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
+
+
+
+
+
+                        # Draw Prediction FPS
+            cv2.putText(frame,'PFPS: {0:.2f}'.format(status['fps']),(30,50),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,0),2,cv2.LINE_AA)
+            
+            # Draw Real FPS
+            # Calculate framerate
+            freq = cv2.getTickFrequency()
+
+            t2 = cv2.getTickCount()
+            time1 = (t2-t1)/freq
+            frame_rate_calc= 1/time1
+            cv2.putText(frame,'RFPS: {0:.2f}'.format(frame_rate_calc),(30,80),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,0),2,cv2.LINE_AA)        
+                    
+
+            # encode the frame in JPEG format
+            (flag, encodedImage) = cv2.imencode(".jpg", frame)
+            # ensure the frame was successfully encoded
+            if not flag:
+                continue
+            # yield the output frame in the byte format
+            yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' +
+                bytearray(encodedImage) + b'\r\n')
+            
+    return StreamingResponse(generate(), media_type="multipart/x-mixed-replace; boundary=frame")

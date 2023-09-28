@@ -22,7 +22,8 @@ class SysMane:
             "confident_score" : 0,
             "current_classes" : "",
             "detect_flag" : False,
-            "fps" : 0
+            "fps" : 0,
+            "box" : None,
         }
 
     def getConfig(self):
@@ -84,6 +85,12 @@ class SysMane:
 
     def setCurrentResult(self, result):
         self.running = result
+
+    def setCurrentBox(self, box):
+        self.running["box"] = box
+
+    def getCurrentBox(self):
+        return self.running["box"]
 
     
 

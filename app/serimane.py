@@ -32,6 +32,7 @@ class SeriMane:
         self.sensor = None
         self.arduino_port = None
         self.arduino = None
+        self.exit_event = threading.Event()
         while not self.arduino_port and self.arduino is None:
             self.initArduinoPort()
             time.sleep(1)
@@ -46,7 +47,24 @@ class SeriMane:
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.sensor_pin, GPIO.IN)
         self.prepare()
-        
+
+    # When destroy is called
+    def __del__(self):
+        self.closeConnection()
+        GPIO.cleanup()
+        # Close the thread
+        self.exit_event.set()
+        if self.receive_thread:
+            self.receive_thread.join()
+        if self.obstacle_thread:
+            self.obstacle_thread.join()
+        if self.sensor_thread:
+            self.sensor_thread.join()
+
+        # Clear the thread
+        self.receive_thread = None
+        self.obstacle_thread = None
+        self.sensor_thread = None
 
     def initArduinoPort(self):
         self.arduino_port = self.findArduinoPort()
@@ -103,6 +121,16 @@ class SeriMane:
             else:
                 logger.error("No sensor")
                 time.sleep(0.5)
+                continue
+
+            # If server is trigger to restart (by uvicorn) then exit the thread
+            if self.exit_event.is_set():
+                logger.info("Obstacle detection thread is exiting.")
+                return
+            
+            
+
+
             
     def log(self, message, status=None, level="info"):
         # Store the status
