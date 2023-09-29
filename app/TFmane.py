@@ -106,7 +106,7 @@ class TFMane:
 
 
     def setupCamera(self):
-        debugrun = True
+        debugrun = False
         if debugrun:
             # If platform is not linux, then use the default camera
             if system_info != 'Linux':
@@ -304,7 +304,7 @@ class TFMane:
 
             self.sysmane.setCurrentResult(self.current_status)
 
-            time.sleep(0.33)
+            time.sleep(1)
             # All the results have been drawn on the frame, so it's time to display it.
             # cv2.imshow('Object detector', frame)
             # Press 'q' to quit
