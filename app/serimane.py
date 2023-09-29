@@ -32,7 +32,6 @@ class SeriMane:
         self.sensor = None
         self.arduino_port = None
         self.arduino = None
-        self.exit_event = threading.Event()
         while not self.arduino_port and self.arduino is None:
             self.initArduinoPort()
             time.sleep(1)
@@ -42,29 +41,41 @@ class SeriMane:
         # self.receive_thread = threading.Thread(counter=self.timeCount)
         self.receive_thread.daemon = True 
         self.receive_thread.start()
-        # Initialize GPIO for the obstacle sensor
-        self.sensor_pin = 17  # Use the GPIO number, not the physical pin number
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(self.sensor_pin, GPIO.IN)
+
+        if platform.system() != "Linux":
+            self.log("Windows detected, skipping GPIO setup", "Windows", "warning")
+
+        else: 
+            # Initialize GPIO for the obstacle sensor
+            self.sensor_pin = 17  # Use the GPIO number, not the physical pin number
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setup(self.sensor_pin, GPIO.IN)
+            self.log("GPIO setup done", "GPIO", "success")
+
         self.prepare()
+        
+
 
     # When destroy is called
     def __del__(self):
         self.closeConnection()
-        GPIO.cleanup()
-        # Close the thread
-        self.exit_event.set()
+        if platform.system() != "Linux":
+            GPIO.cleanup()
+            if self.obstacle_thread:
+                self.obstacle_thread.join()
+            if self.sensor_thread:
+                self.sensor_thread.join()
+
+            self.obstacle_thread = None
+            self.sensor_thread = None
+        
         if self.receive_thread:
             self.receive_thread.join()
-        if self.obstacle_thread:
-            self.obstacle_thread.join()
-        if self.sensor_thread:
-            self.sensor_thread.join()
+
 
         # Clear the thread
         self.receive_thread = None
-        self.obstacle_thread = None
-        self.sensor_thread = None
+
 
     def initArduinoPort(self):
         self.arduino_port = self.findArduinoPort()
@@ -78,15 +89,24 @@ class SeriMane:
             # Retry to find Arduino
             self.arduino = None
 
+
+
     def prepare(self):
         self.checkCurrentState()
         self.checkBusy()
         # Start a thread for obstacle detection
-        self.obstacle_thread = threading.Thread(target=self.detectObstacle)
-        self.obstacle_thread.daemon = True
-        self.obstacle_thread.start()
-        self.sensor_thread = threading.Thread(target=self.timeCount)
-        self.sensor_thread.start()
+        if platform.system() != "Linux":
+            self.log("Windows detected, skipping obstacle detection", "Windows", "warning")
+            # Set default value for sensor
+            self.current_status["sensor"]["init"] = True
+            self.current_status["sensor"]["available"] = True
+            self.current_status["sensor"]["value"] = False
+        else:
+            self.obstacle_thread = threading.Thread(target=self.detectObstacle)
+            self.obstacle_thread.daemon = True
+            self.obstacle_thread.start()
+            self.sensor_thread = threading.Thread(target=self.timeCount)
+            self.sensor_thread.start()
 
     def timeCount(self):
         time.sleep(5)
@@ -95,7 +115,7 @@ class SeriMane:
             self.log("No sensor found, please find one for me pretty please >,< ")
             self.current_status["sensor"]["init"] == True
         # else:
-            # self.sensor_thread.join()
+            # self.sensor_thread.join()``
         
     def detectObstacle(self):
         while True:
@@ -104,7 +124,7 @@ class SeriMane:
                 counterout = 0
                 sensor_value = GPIO.input(self.sensor_pin)
                 if sensor_value == GPIO.HIGH:
-                    self.log("No obstacle detected")
+                    # self.log("No obstacle detected")
                     self.current_status["sensor"]["value"] = False
                     counterout = counterout+1
                     if counterout == 10:
@@ -113,7 +133,7 @@ class SeriMane:
                         self.sensor_thread = threading.Thread(target=self.timeCount)
                         self.sensor_thread.start()
                 else:
-                    self.log("Obstacle detected")
+                    # self.log("Obstacle detected")
                     self.current_status["sensor"]["init"] = True 
                     self.current_status["sensor"]["available"] = True
                     self.current_status["sensor"]["value"] = True
@@ -123,13 +143,7 @@ class SeriMane:
                 time.sleep(0.5)
                 continue
 
-            # If server is trigger to restart (by uvicorn) then exit the thread
-            if self.exit_event.is_set():
-                logger.info("Obstacle detection thread is exiting.")
-                return
             
-            
-
 
             
     def log(self, message, status=None, level="info"):
@@ -185,6 +199,7 @@ class SeriMane:
                 return "busy", self.current_status
             if self.arduino:
                 self.log(f"Sending message to Arduino: {message}", "Sending")
+                # self.log(f"<<-- Message sent to Arduino: {message}", "Sent", "debug")
                 try:
                     self.arduino.write(message.encode())  # Send the message to Arduino
                     self.log(f"Message sent to Arduino: {message}", "Sent", "success")
@@ -216,6 +231,7 @@ class SeriMane:
                 # If the line is empty, skip it
                 if not line:
                     continue
+                self.log(f"-->> Received message from Arduino: {line}", "Received", "debug")
                 # If the line is "Ready!", set isArduinoReady to True
                 if line == "Ready!":
                     self.current_status["ready"] = True
@@ -248,31 +264,12 @@ class SeriMane:
 
     def piInstruction(self, action):
         instruction = self.sysmane.app_config.get("instructions")
-        # The data look like this 
-        # # {
-        # "R": {
-        #     "step": [
-        #         "COV01", "COV11", "S00D080", "S01D075", "S02D080", "S03D075", "S04D000", "S05D040", "DPS001"
-        #     ]
-        # },
-        # "preGrip": {
-        #     "step": [
-        #         "COV01", "COV11", "S00D080", "S01D075", "S02D020", "S03D030", "S04D000", "S05D040", "DPS001"
-        #     ]
-        # }
-        # }
-        #
 
         #Check if the action is in the instruction list if not return error
         if action not in instruction:
             self.log(f"Action {action} not found in instruction list", "Error", "error")
             return None
         
-
-        # We need to convert the instruction to old format
-        # The old format look like this
-        # COV01>COV11>S00D080>S01D075>S02D080>S03D075>S04D000>S05D040>DPS001 and add >END at the end
-
         # Convert to old format
         step = instruction[action]["step"]
         old_format = ">".join(step) + ">END"
@@ -300,7 +297,7 @@ class SeriMane:
         servo = str(servo).zfill(2)
 
         # Send the instruction to Arduino with PIS(Servo)D(Degree)
-        self.sendMessageToArduino(f"PIS{servo}D{degree}")
+        self.sendMessageToArduino(f"PXS{servo}D{degree}>END")
 
     def setConveyor(self, conveyor, mode=None, speed=None):
         if mode is None and speed is None:
@@ -310,7 +307,7 @@ class SeriMane:
             mode = self.current_status["conv"]["mode"][conveyor]
         if speed is None:
             speed = self.current_status["conv"]["speed"][conveyor]
-            
+        
         # Check if the conveyor is in range
         if conveyor < 0 or conveyor > int(self.sysmane.app_config.get("conveyor_count")):
             self.log(f"Conveyor {conveyor} not in range (0, {self.sysmane.app_config.get('conveyor_count')})", "Error", "error")
@@ -333,10 +330,8 @@ class SeriMane:
         conveyor = str(conveyor).zfill(1)
 
         # Send the instruction to Arduino with PIC(Conveyor)(Mode)
-        self.sendMessageToArduino(f"PIC{conveyor}M{mode}S{str(speed).zfill(3)}")
+        self.sendMessageToArduino(f"PXC{conveyor}M{mode}S{str(speed).zfill(3)}>END")
 
-    def resetServo(self):
-        self.piInstruction("R")
 
     def closeConnection(self):
         if self.arduino:

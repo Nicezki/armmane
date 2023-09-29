@@ -22,6 +22,7 @@ import asyncio
 from sse_starlette.sse import EventSourceResponse
 from starlette.responses import StreamingResponse
 import sys
+import time
 
 
 
@@ -386,8 +387,6 @@ async def event_generator(request: Request):
         if last_status != current_status:
             # If client reconnects or status changes, send current_status to client
             last_status = copy.deepcopy(current_status)
-            print (f"current_status: {id(current_status)}")
-            print (f"last_status: {id(last_status)}")
             yield {
                 "event": "arm_status",
                 "data": json.dumps(current_status)
@@ -416,17 +415,11 @@ async def video_generator(request: Request):
             break
         # Check if status changed
         current_status = sys.getCurrentResult()
-        # print("current_status")
-        # print(current_status['servo'])
-        # print("last_status")
-        # print(last_status['servo'])
         
         # Compare individual keys and values
         if last_status != current_status:
             # If client reconnects or status changes, send current_status to client
             last_status = copy.deepcopy(current_status)
-            print (f"current_status: {id(current_status)}")
-            print (f"last_status: {id(last_status)}")
             yield {
                 "event": "prediction",
                 "data": json.dumps(current_status)
@@ -456,6 +449,7 @@ async def get_video_stream():
             yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' +
                 bytearray(encodedImage) + b'\r\n')
             
+            time.sleep(0.2)
 
     return StreamingResponse(generate(), media_type="multipart/x-mixed-replace; boundary=frame")
 
@@ -538,5 +532,8 @@ async def get_video_stream():
             # yield the output frame in the byte format
             yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' +
                 bytearray(encodedImage) + b'\r\n')
+            
+            time.sleep(0.2)
+            
             
     return StreamingResponse(generate(), media_type="multipart/x-mixed-replace; boundary=frame")

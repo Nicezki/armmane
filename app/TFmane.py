@@ -30,7 +30,7 @@ class VideoStream:
         # Initialize the PiCamera and the camera image stream
         # self.stream = cv2.VideoCapture(device)
 
-        self.stream = CamGear(source=device, time_delay = 0, logging = True).start()
+        self.stream = CamGear(source=device, time_delay = 0, logging = False).start()
             
         # Read first frame from the stream
         self.frame = self.stream.read()
