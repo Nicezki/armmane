@@ -438,6 +438,21 @@ async def sse_video_stream(request: Request):
 async def get_video_stream():
     def generate():
         while True:
+            # If camera is not available, use no_camera_image (in config) instead
+            if not tmn.video:
+                frame = cv2.imread(sys.app_config.get("no_camera_image"))
+                # encode the frame in JPEG format
+                (flag, encodedImage) = cv2.imencode(".jpg", frame)
+                # ensure the frame was successfully encoded
+                if not flag:
+                    continue
+                # yield the output frame in the byte format
+                yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' +
+                    bytearray(encodedImage) + b'\r\n')
+                time.sleep(5)
+                continue
+
+
             frame = tmn.video.read()
 
             # encode the frame in JPEG format
@@ -458,7 +473,21 @@ async def get_video_stream():
 async def get_video_stream():
     def generate():
         while True:
-            t1 = cv2.getTickCount()
+            # If camera is not available, use no_camera_image (in config) instead
+            if not tmn.video:
+                frame = cv2.imread(sys.app_config.get("no_camera_image"))
+                # encode the frame in JPEG format
+                (flag, encodedImage) = cv2.imencode(".jpg", frame)
+                # ensure the frame was successfully encoded
+                if not flag:
+                    continue
+                # yield the output frame in the byte format
+                yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' +
+                    bytearray(encodedImage) + b'\r\n')
+                time.sleep(5)
+                continue
+        
+            # t1 = cv2.getTickCount()
             frame = tmn.video.read()
 
             # From tfm:
@@ -508,20 +537,17 @@ async def get_video_stream():
                     cv2.putText(frame, label, (xmin, label_ymin-7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
 
 
-
-
-
-                        # Draw Prediction FPS
+            # Draw Prediction FPS
             cv2.putText(frame,'PFPS: {0:.2f}'.format(status['fps']),(30,50),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,0),2,cv2.LINE_AA)
             
             # Draw Real FPS
             # Calculate framerate
-            freq = cv2.getTickFrequency()
+            # freq = cv2.getTickFrequency()
 
-            t2 = cv2.getTickCount()
-            time1 = (t2-t1)/freq
-            frame_rate_calc= 1/time1
-            cv2.putText(frame,'RFPS: {0:.2f}'.format(frame_rate_calc),(30,80),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,0),2,cv2.LINE_AA)        
+            # t2 = cv2.getTickCount()
+            # time1 = (t2-t1)/freq
+            # frame_rate_calc= 1/time1
+            # cv2.putText(frame,'RFPS: {0:.2f}'.format(frame_rate_calc),(30,80),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,0),2,cv2.LINE_AA)        
                     
 
             # encode the frame in JPEG format
@@ -533,7 +559,7 @@ async def get_video_stream():
             yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' +
                 bytearray(encodedImage) + b'\r\n')
             
-            time.sleep(0.2)
+            time.sleep(0.4)
             
             
     return StreamingResponse(generate(), media_type="multipart/x-mixed-replace; boundary=frame")

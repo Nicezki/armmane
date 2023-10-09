@@ -2,7 +2,7 @@
     "model_name": "RMUTT CPE Desuyo",
     "model_version": "1.0",
     "model_author": "RMUTT CPE",
-    "model_file": "rmutt_model.tflite",
+    "model_file": "v2-15000.tflite",
     "model_classes": [
         "Red_Triangle",
         "Blue_Triangle",
@@ -12,11 +12,19 @@
         "Blue_Cylinder"
 
     ],
+    "model_labels": [
+        "สามเหลี่ยมสีแดง",
+        "สามเหลี่ยมสีน้ำเงิน",
+        "สี่เหลี่ยมสีขาว",
+        "สี่เหลี่ยมสีแดง",
+        "ทรงกระบอกสีขาว",
+        "ทรงกระบอกสีน้ำเงิน"
+    ],
     "model_description": "This is a model for RMUTT CPE Arm Robot that can classify 10 classes of objects.",
     "config":{
         "image_width": 640,
         "image_height": 640,
-        "min_conf_threshold": 0.85,
+        "min_conf_threshold": 0.8,
         "input_mean": 127.5,
         "input_std": 127.5,
         "framerate": 30

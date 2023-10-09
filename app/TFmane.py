@@ -29,8 +29,12 @@ class VideoStream:
     def __init__(self,resolution=(640,480),framerate=30,device=0):
         # Initialize the PiCamera and the camera image stream
         # self.stream = cv2.VideoCapture(device)
-
-        self.stream = CamGear(source=device, time_delay = 0, logging = False).start()
+        try:
+            self.stream = CamGear(source=device, time_delay = 0, logging = False).start()
+        except Exception as e:
+            logger.info("Error when open camera: {}".format(e))
+            self.stream = None
+            return None
             
         # Read first frame from the stream
         self.frame = self.stream.read()
@@ -118,14 +122,32 @@ class TFMane:
             
         logger.info("Camara index: {}".format(self.camera))
 
-        if self.camera==[]:
+        if len(self.camera) > 0:
+            try:
+                self.video = VideoStream(resolution=(self.imageWidth,self.imageHeight),framerate=self.framerate,device=self.camera[0]).start()
+                # Try to get a frame to check if the camera is ready
+                frame = self.video.read()
+                logger.info("Camera is ready")
+            except Exception as e:
+                logger.info("Error when open camera: {}".format(e))
+                return False
+            return True
+        else:
             logger.info("No camera avaliable right now, Please plug in the usb camera or picam ")
             return False
-        else:
-            self.video = VideoStream(resolution=(self.imageWidth,self.imageHeight),framerate=self.framerate,device=self.camera[0]).start()
-            return True
         
     def setupModel(self):
+        if self.model is None:
+            logger.info("No model avaliable right now, Please choose the model first")
+            return False
+        if self.interpreter is not None:
+            self.interpreter.close()
+            logger.info("[TFMaid] Detect that interpreter is running,  So now It's been closed")
+
+        if self.camera is None:
+            logger.info("[TFMaid] Detect that camera is not ready,  Can't setup model")
+            return False
+        
         self.interpreter = Interpreter(model_path=self.sysmane.getFullModelPath(self.sysmane.getCurrentModel()))
         self.interpreter.allocate_tensors()
         
@@ -177,19 +199,22 @@ class TFMane:
         if not camera_status:
             logger.info("[TFMaid] Camera is not ready, please check the camera")
             return False
-
-        self.setupModel()
-        self.setupCamera()
-        self.setupThread()
-        logger.info("[TFMaid] setting up completed")
+        else:
+            self.setupModel()
+            self.setupCamera()
+            self.setupThread()
+            logger.info("[TFMaid] setting up completed")
     
     
     def checkAvaiableCamera(self):
         # checks the first 10 indexes.
+        #If linux, then only scan 1 index
         index = 0
         arr = []
         i = 10
         while i > 0:
+            if system_info == 'Linux' and index > 0:
+                break
             logger.info("Trying to open camera index: {}".format(index))
             cap = cv2.VideoCapture(index)
             if cap.read()[0]:
@@ -205,6 +230,10 @@ class TFMane:
     #     return False
         
     def detect(self):
+        if self.video is None:
+            logger.info("[TFMaid] Detect that video is not ready,  So now It's been closed")
+            return False
+        
         self.close = False
         logger.info("[TFMaid] Detecting")
         # Initialize frame rate calculation
@@ -250,6 +279,7 @@ class TFMane:
                 if ((scores[i] > self.model_config.get("config","min_conf_threshold")) and (scores[i] <= 1.0)):
                     # Get bounding box coordinates and draw box
                     # Interpreter can return coordinates that are outside of image dimensions, need to force them to be within image using max() and min()
+                    self.current_status['detect_flag'] = True
                     ymin = int(max(1,(boxes[i][0] * self.imageHeight)))
                     xmin = int(max(1,(boxes[i][1] * self.imageWidth)))
                     ymax = int(min(self.imageHeight,(boxes[i][2] * self.imageHeight)))
@@ -287,7 +317,13 @@ class TFMane:
                     # #DEPRECATED : After build 202309290001 - we will use the new way to send the result
                     # cv2.rectangle(frame, (xmin, label_ymin-labelSize[1]-10), (xmin+labelSize[0], label_ymin+baseLine-10), (255, 255, 255), cv2.FILLED) # Draw white box to put label text in
                     # cv2.putText(frame, label, (xmin, label_ymin-7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2) # Draw label text
-                
+            
+            #Determine if the box is empty
+            if 'box' in self.current_status and self.current_status['box'] is None:
+                self.current_status['detect_flag'] = False
+            else:
+                self.current_status['detect_flag'] = True
+
             # Calculate framerate
             t2 = cv2.getTickCount()
             time1 = (t2-t1)/freq
