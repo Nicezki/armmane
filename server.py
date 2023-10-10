@@ -2,6 +2,7 @@
 # python -m uvicorn server:app --reload
 # For local testing, use
 # python -m uvicorn server:app --reload --host 0.0.0.0 --port 5000 --ssl-keyfile=./certs/site-key.pem --ssl-certfile=./certs/site-cert.pem  
+# python -m uvicorn server:app --host 0.0.0.0 --port 5000 --ssl-keyfile=./certs/site-key.pem --ssl-certfile=./certs/site-cert.pem 
 
 
 
@@ -99,8 +100,8 @@ app.add_middleware(
 )
 
 sys = sysmane.SysMane()
-amn = armmane.ArmMane(sys)
 seri = serimane.SeriMane(sys)
+amn = armmane.ArmMane(sys, seri)
 tmn = TFmane.TFMane(sys)
 
 
@@ -365,6 +366,29 @@ async def command_reset():
             "message": "Reset arm"
         }
     )
+
+@app.get("/mode/{mode}", tags=["Status"], description="Set mode of arm (manual or auto)")
+async def mode(mode: str):
+    # If mode is not manual or auto
+    if mode not in ["manual", "auto"]:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "error",
+                "message": "Mode must be manual or auto"
+            }
+        )
+    # Set mode
+    amn.setMode(mode)
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Set mode to {}".format(mode)
+        }
+    )
+
+
 
 async def event_generator(request: Request):
     last_status = {}
