@@ -101,7 +101,7 @@ app.add_middleware(
 
 sys = sysmane.SysMane()
 seri = serimane.SeriMane(sys)
-amn = armmane.ArmMane(sys, seri)
+amn = armmane.ArmMane(sys,seri)
 tmn = TFmane.TFMane(sys)
 
 
@@ -367,18 +367,17 @@ async def command_reset():
         }
     )
 
-@app.get("/mode/{mode}", tags=["Status"], description="Set mode of arm (manual or auto)")
+
+@app.get("/mode/{mode}", tags=["Mode"], description="Set mode of ArmMane")
 async def mode(mode: str):
-    # If mode is not manual or auto
-    if mode not in ["manual", "auto"]:
+    if mode not in ["auto", "manual"]:
         return JSONResponse(
             status_code=400,
             content={
                 "status": "error",
-                "message": "Mode must be manual or auto"
+                "message": "Mode must be auto or manual"
             }
         )
-    # Set mode
     amn.setMode(mode)
     return JSONResponse(
         status_code=200,
@@ -387,8 +386,6 @@ async def mode(mode: str):
             "message": "Set mode to {}".format(mode)
         }
     )
-
-
 
 async def event_generator(request: Request):
     last_status = {}
@@ -500,15 +497,19 @@ async def get_video_stream():
             # If camera is not available, use no_camera_image (in config) instead
             if not tmn.video:
                 frame = cv2.imread(sys.app_config.get("no_camera_image"))
-                # encode the frame in JPEG format
-                (flag, encodedImage) = cv2.imencode(".jpg", frame)
-                # ensure the frame was successfully encoded
-                if not flag:
-                    continue
-                # yield the output frame in the byte format
-                yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' +
-                    bytearray(encodedImage) + b'\r\n')
-                time.sleep(5)
+                # If image is not available, use black image instead
+                if not frame:
+                    print("No camera image found")
+                else:
+                    # encode the frame in JPEG format
+                    (flag, encodedImage) = cv2.imencode(".jpg", frame)
+                    # ensure the frame was successfully encoded
+                    if not flag:
+                        continue
+                    # yield the output frame in the byte format
+                    yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' +
+                        bytearray(encodedImage) + b'\r\n')
+                    time.sleep(5)
                 continue
         
             # t1 = cv2.getTickCount()
