@@ -321,8 +321,6 @@ class TFMane:
             #Determine if the box is empty
             if 'box' in self.current_status and self.current_status['box'] is None:
                 self.current_status['detect_flag'] = False
-                self.current_status['confident_score'] = 0
-                self.current_status['current_classes'] = "None"
             else:
                 self.current_status['detect_flag'] = True
 
