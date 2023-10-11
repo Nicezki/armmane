@@ -16,7 +16,7 @@ class ArmMane:
             "step": 0,
             "idle" : True,
             "start" : 0,
-            "mode" : 1,
+            "mode" : 0,
             "items": [
                 2,2,2,
             ]
@@ -85,6 +85,8 @@ class ArmMane:
                 logger.debug("Mode changed to manual, stop auto mode")
                 # Stop the auto mode and kill the thread
                 return
+            
+            # Check if seriak still avaliable
             
             # Wait for the next step
             time.sleep(0.1)
@@ -199,7 +201,7 @@ class ArmMane:
             finish_count = 0
             while(self.seri.current_status["busy"] or finish_count <10):
                 time.sleep(0.1)
-                if(self.serimane.current_status["busy"]):
+                if(self.seri.current_status["busy"]):
                     logger.debug("Instruction still running, Waiting for it to finish")
                     finish_count = 0
                 else:

@@ -231,7 +231,7 @@ class SeriMane:
                 # If the line is empty, skip it
                 if not line:
                     continue
-                self.log(f"-->> Received message from Arduino: {line}", "Received", "debug")
+                #self.log(f"-->> Received message from Arduino: {line}", "Received", "debug")
                 # If the line is "Ready!", set isArduinoReady to True
                 if line == "Ready!":
                     self.current_status["ready"] = True
