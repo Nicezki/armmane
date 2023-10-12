@@ -101,8 +101,8 @@ app.add_middleware(
 
 sys = sysmane.SysMane()
 seri = serimane.SeriMane(sys)
-amn = armmane.ArmMane(sys, seri)
 tmn = TFmane.TFMane(sys)
+amn = armmane.ArmMane(sys, seri,tmn)
 
 
 @app.get("/info", tags=["Info"])

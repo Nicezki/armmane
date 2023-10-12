@@ -7,10 +7,10 @@ import time
 
 
 class ArmMane:  
-    def __init__(self,sysmane,serimane):
+    def __init__(self,sysmane,serimane,TFmane):
         self.sysm = sysmane
         self.seri = serimane
-
+        self.tfma = TFmane
 
         self.status = {
             "step": 0,
@@ -57,10 +57,6 @@ class ArmMane:
             logger.debug("Auto mode thread is not alive, do nothing")
             return
     
-
-
-
-
     def autoMane(self):
         # Check items in the box 
         # check every array in the items
@@ -148,15 +144,21 @@ class ArmMane:
                 else:
                     logger.debug(f"Box number {item} now has {item} items, Proceed to grab the item")
                     self.grabBox(item)
+                    break
+        
         elif step == 2: #Place the item on the conveyor
             self.stepControl(2)
 
         elif step == 3: #Move the conveyor
+            #Open camera
+            self.tfma.setupThread
             # Wait for sensor to detect the item
             logger.debug("Waiting for the sensor to detect the item")
             while(not self.seri.current_status["sensor"]):
                 time.sleep(0.1)
             logger.debug("Item detected, proceed to next step")
+            # Stop the camera
+            self.tfma.stopThread
             
             
         elif step == 4: #Detect the shape

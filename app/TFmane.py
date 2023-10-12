@@ -170,8 +170,11 @@ class TFMane:
 
     def setupThread(self):
         self.detect_thread = threading.Thread(target=self.detect)
-        self.detect_thread.daemon = True
         self.detect_thread.start()
+    
+    def killThread(self):
+        self.detect_thread = threading.Thread(target=self.detect)
+        self.detect_thread.kill()
 
 
     # When destroy the object, close the camera
@@ -202,7 +205,6 @@ class TFMane:
         else:
             self.setupModel()
             self.setupCamera()
-            self.setupThread()
             logger.info("[TFMaid] setting up completed")
     
     
@@ -223,11 +225,6 @@ class TFMane:
             index += 1
             i -= 1
         return arr
-    
-    # def closeDetect(self):
-    #     if self.close:
-    #         return True
-    #     return False
         
     def detect(self):
         if self.video is None:
