@@ -137,13 +137,13 @@ class ArmMane:
         if step == 0 : #Reset the arm to the initial position
             self.stepControl(0)
         elif step == 1: #Grab from the box
-            for item in self.status["items"]:
+            for i, item in enumerate(self.status["items"]):
                 if(item == 0):
-                    logger.debug(f"Box number {item} is empty! Skippping this box")
+                    logger.debug(f"Box number {i} is empty! Skippping this box")
                     continue
                 else:
-                    logger.debug(f"Box number {item} now has {item} items, Proceed to grab the item")
-                    self.grabBox(item)
+                    logger.debug(f"Box number {i} now has {item} items, Proceed to grab the item")
+                    self.grabBox(i)
                     break
         
         elif step == 2: #Place the item on the conveyor
@@ -151,14 +151,14 @@ class ArmMane:
 
         elif step == 3: #Move the conveyor
             #Open camera
-            self.tfma.setupThread
+            #self.tfma.setupThread()
             # Wait for sensor to detect the item
             logger.debug("Waiting for the sensor to detect the item")
             while(not self.seri.current_status["sensor"]):
                 time.sleep(0.1)
             logger.debug("Item detected, proceed to next step")
             # Stop the camera
-            self.tfma.stopThread
+            #self.tfma.killThread()
             
             
         elif step == 4: #Detect the shape

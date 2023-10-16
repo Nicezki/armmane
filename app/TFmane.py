@@ -177,7 +177,7 @@ class TFMane:
     
     def killThread(self):
         self.detect_thread = threading.Thread(target=self.detect)
-        self.detect_thread.kill()
+        self.detect_thread.join()
 
 
     # When destroy the object, close the camera
