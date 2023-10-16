@@ -500,7 +500,7 @@ async def get_video_stream():
             # If camera is not available, use no_camera_image (in config) instead
             # if not tmn.video:
             if tmn.current_status['camera_running'] == False:
-                frame = cv2.imread(sys.app_config.get("camera_running"))
+                frame = cv2.imread(sys.app_config.get("pause_camera_image"))
                 # encode the frame in JPEG format
                 (flag, encodedImage) = cv2.imencode(".jpg", frame)
                 # ensure the frame was successfully encoded

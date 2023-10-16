@@ -150,6 +150,7 @@ class ArmMane:
             self.stepControl(2)
 
         elif step == 3: #Move the conveyor
+            self.stepControl(3)
             #Open camera
             #self.tfma.setupThread()
             # Wait for sensor to detect the item
@@ -171,6 +172,7 @@ class ArmMane:
 
         
         elif step == 5: #Place the item in the box
+            self.stepControl(5)
             # If shape is detected, place the item in the box according to the shape
             logger.debug("Prepare to place the item in the box")
 

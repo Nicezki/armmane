@@ -8,7 +8,7 @@
     "servo_min_degree" : "0",
     "conveyor_count" : "1",
     "no_camera_image" : "app/assets/images/no_cam.jpg",
-    "pause_camaera_image" : "app/assets/images/wait_cam.jpg",
+    "pause_camera_image" : "app/assets/images/wait_cam.jpg",
     "allowed_posture": [
         [
             {
@@ -55,7 +55,7 @@
             "prePreGrip"
         ],
         "step5" : [
-            "preGrip", "grip", "liftUp", "drop_step"
+            "preGrip", "delay11", "grip", "delay11", "liftUp", "delay11", "dropA"
         ]
     },
     "drop_step":{
