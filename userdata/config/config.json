@@ -8,6 +8,7 @@
     "servo_min_degree" : "0",
     "conveyor_count" : "1",
     "no_camera_image" : "app/assets/images/no_cam.jpg",
+    "pause_camaera_image" : "app/assets/images/wait_cam.jpg",
     "allowed_posture": [
         [
             {

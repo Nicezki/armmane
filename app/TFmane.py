@@ -102,6 +102,8 @@ class TFMane:
             "confident_score" : 0,
             "current_classes" : "",
             "detect_flag" : False,
+            "detect_running" : False,
+            "camera_running" : False,
             "fps" : 0,
             "box" : None,
         }
@@ -128,6 +130,7 @@ class TFMane:
                 # Try to get a frame to check if the camera is ready
                 frame = self.video.read()
                 logger.info("Camera is ready")
+                self.current_status['detect_running'] == True
             except Exception as e:
                 logger.info("Error when open camera: {}".format(e))
                 return False
@@ -182,6 +185,7 @@ class TFMane:
         if self.video is not None:
             self.video.stop()
             logger.info("[TFMaid] Detect that video is running,  So now It's been closed")
+            self.video = None
         if self.interpreter is not None:
             self.interpreter.close()
             logger.info("[TFMaid] Detect that interpreter is running,  So now It's been closed")
@@ -190,7 +194,43 @@ class TFMane:
             logger.info("[TFMaid] Detect that camera is running,  So now It's been closed")
 
 
-        
+    def stopDetect(self):
+        self.current_status['detect_running'] = False
+        self.current_status['detect_flag'] = False
+        self.current_status['box'] = None
+        self.current_status['current_classes'] = ""
+        self.current_status['confident_score'] = 0
+        self.current_status['fps'] = 0
+        self.current_status['current_result'] = None
+        self.sysmane.setCurrentResult(self.current_status)
+        self.interpreter.close()
+
+    def startDetect(self):
+        self.current_status['detect_running'] = True
+
+
+    def stopCamera(self):
+        self.current_status['camera_running'] = False
+        self.video.stop()
+        self.video = None
+
+    def startCamera(self):
+        while True:
+            try:
+                self.video = VideoStream(resolution=(self.imageWidth,self.imageHeight),framerate=self.framerate,device=self.camera[0]).start()
+                # Try to get a frame to check if the camera is ready
+                frame = self.video.read()
+                logger.info("Camera is ready")
+                self.current_status['camera_running'] = True
+                break
+            except Exception as e:
+                logger.info("Error when open camera: {}".format(e))
+                logger.info("Retry to open camera in 1 second...")
+                time.sleep(1)
+        return True
+    
+
+
         
 
     def setup(self):
@@ -206,6 +246,9 @@ class TFMane:
             self.setupModel()
             self.setupCamera()
             logger.info("[TFMaid] setting up completed")
+
+    def closeDetect(self):
+        return self.close
     
     
     def checkAvaiableCamera(self):
@@ -240,6 +283,9 @@ class TFMane:
 
         #for frame1 in camera.capture_continuous(rawCapture, format="bgr",use_video_port=True):
         while True:
+            if self.current_status['detect_running'] == False:
+                time.sleep(1)
+                continue
 
             # Start timer (for calculating frame rate)
             t1 = cv2.getTickCount()
@@ -347,3 +393,5 @@ class TFMane:
         # Clean up
         # destroyAllWindows()
         # self.video.stop()
+
+        
