@@ -203,7 +203,6 @@ class TFMane:
         self.current_status['fps'] = 0
         self.current_status['current_result'] = None
         self.sysmane.setCurrentResult(self.current_status)
-        self.interpreter.close()
 
     def startDetect(self):
         self.current_status['detect_running'] = True

@@ -152,7 +152,11 @@ class ArmMane:
         elif step == 3: #Move the conveyor
             self.stepControl(3)
             #Open camera
-            #self.tfma.setupThread()
+            self.tfma.startCamera()
+            if(self.sysm.running["detect_flag"]):
+                logger.debug("Shape detected, proceed to next step")
+            else:
+                logger.debug("Shape not detected")
             # Wait for sensor to detect the item
             logger.debug("Waiting for the sensor to detect the item")
             while(not self.seri.current_status["sensor"]):
@@ -165,10 +169,10 @@ class ArmMane:
         elif step == 4: #Detect the shape
             self.stepControl(4)
             #Detect the shape
-            if(self.sysm.running["detect_flag"]):
-                logger.debug("Shape detected, proceed to next step")
-            else:
-                logger.debug("Shape not detected")
+            # if(self.sysm.running["detect_flag"]):
+            #     logger.debug("Shape detected, proceed to next step")
+            # else:
+            #     logger.debug("Shape not detected")
 
         
         elif step == 5: #Place the item in the box
@@ -217,7 +221,23 @@ class ArmMane:
             logger.debug(f"Box number {box_number} now has {self.status['items'][box_number]} items")
             return True
             
-
+    def DropBox(self,box_number):
+         for step in self.sysm.app_config.get("drop_step","drop"+str(box_number)):
+                # If the instruction example are: delay0.0 or delay1 or delay0.55
+                if(step.startswith("delay")):
+                    # Split the instruction to get the delay time
+                    delay_time = step.split("delay")[1]
+                    logger.debug(f"Delay for {delay_time} seconds")
+                    # Wait for the delay time
+                    time.sleep(float(delay_time))
+                else:
+                    logger.debug(f"Prepare to send instuction {step} to serial")
+                    #If serial is busy, wait until it's idle
+                    while(self.seri.current_status["busy"]):
+                        time.sleep(0.1)
+                    # Send the instruction to the serial
+                    self.seri.piInstruction(step)
+                    logger.debug(f"Instuction {step} sent to serial for execution")
         
 
 
