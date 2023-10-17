@@ -2,7 +2,7 @@
     "config_version": "1.0",
     "model_folder": "models",
     "current_model": "rmutt_model1",
-    "serial_buadrate": "55200",
+    "serial_buadrate": "115200",
     "servo_count" : "5",
     "servo_max_degree" : "180",
     "servo_min_degree" : "0",
@@ -46,38 +46,41 @@
             "grab_step"
         ],
         "step2" : [
-            "prePreDropBelt", "delay5","preDropBelt", "delay5","dropBelt", "delay5","postDropBelt"
+            "prePreDropBelt", "delay8","preDropBelt", "delay8","dropBelt", "delay8","postDropBelt"
         ],
         "step3" : [
-            "moveConv", "delay5", "stopConv"
+            "moveConv"
         ],
         "step4" : [
-            "prePreGrip"
+            "stopConv"
+        ],
+        "step4.1" : [
+            "prePreGrip","delay8"
         ],
         "step5" : [
-            "preGrip", "delay5", "grip", "delay5", "liftUp", "delay5", "drop_step"
+            "preGrip", "delay8", "grip", "delay8", "liftUp", "delay8", "drop_step"
         ]
     },
     "drop_step":{
-        "drop1" : [
+        "drop0" : [
             "dropA", "postDrop"
         ],
-        "drop2" : [
+        "drop1" : [
             "dropB", "postDrop"
         ],
-        "drop3" : [
+        "drop2" : [
             "dropC", "postDrop"
         ]
     },
     "grab_step":{
+        "grab0" : [
+            "preGetA","delay8","getA","delay8","postGetA"
+        ],
         "grab1" : [
-            "preGetA","delay5","getA","delay5","postGetA"
+            "preGetB","delay8","getB","delay8","postGetB"
         ],
         "grab2" : [
-            "preGetB","delay5","getB","delay5","postGetB"
-        ],
-        "grab3" : [
-            "preGetC","delay5","getC","delay5","postGetC"
+            "preGetC","delay8","getC","delay8","postGetC"
         ]
     },
     "instructions": {

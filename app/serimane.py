@@ -249,6 +249,7 @@ class SeriMane:
                     self.log("Arduino is not busy.", "Ready", "success")
                     continue
                 if line.startswith("PS") or line.startswith("PF"):
+                    logger.info(f"Status received: {line}")
                     self.current_status["instruction"] = self.extractInstruction(line)
                     self.current_status["statuscode"] = line
                 else: self.log(f"{line}", "Arduino", "debug")
@@ -343,47 +344,59 @@ class SeriMane:
         ServoDegree = [0, 0, 0, 0, 0, 0]
         ConvState = [0, 0]
         ConvSpeed = [0, 0]
+        isCompleteReading = False
+        try:
+            # Split input by 'S' to separate servo data
+            servo_data_parts = input.split('S')[1:7]  # Skip the first element
 
-        # Split input by 'S' to separate servo data
-        servo_data_parts = input.split('S')[1:7]  # Skip the first element
+            for i, data_part in enumerate(servo_data_parts):
+                servo_number = i
+                # Locate the 'D' separator within each servo data part
+                d_index = data_part.find('D')
+                if d_index != -1:  # Check if 'D' separator was found
+                    degree_str = data_part[d_index + 1:d_index + 4]  # Extract 3 characters for the degree part
+                    if degree_str:
+                        degree = int(degree_str)
+                        ServoDegree[servo_number] = degree
+                    else:
+                        # Handle the case where degree_str is empty or not a valid integer
+                        ServoDegree[servo_number] = 0  # or some default value, depending on your requirements
 
-        for i, data_part in enumerate(servo_data_parts):
-            servo_number = i
-            # Locate the 'D' separator within each servo data part
-            d_index = data_part.find('D')
-            if d_index != -1:  # Check if 'D' separator was found
-                degree_str = data_part[d_index + 1:d_index + 4]  # Extract 3 characters for the degree part
-                if degree_str:
-                    degree = int(degree_str)
-                    ServoDegree[servo_number] = degree
-                else:
-                    # Handle the case where degree_str is empty or not a valid integer
-                    ServoDegree[servo_number] = 0  # or some default value, depending on your requirements
+            # Split input by 'C' to separate conveyor data
+            #C0M{mode}S{speed}C1M{mode}S{speed}
+            # Mode is 1 digit start from 0 to 2
+            # Speed is 3 digit start from 000 to 255
+            # input.split('C') return ['PS00D000S01D000S02D000S03D000S04D000S05D000', '0M0S000', '1M0S000']
+            # print (input.split('C'))
+            # print (f"CVState0: {input.split('C')[1][2:3]} | CVSpeed0: {input.split('C')[1][4:7]} | CVState1: {input.split('C')[2][2:3]} | CVSpeed1: {input.split('C')[2][4:7]}")
+            ConvState[0] = int(input.split('C')[1][2:3])
+            ConvSpeed[0] = int(input.split('C')[1][4:7])
+            ConvState[1] = int(input.split('C')[2][2:3])
+            ConvSpeed[1] = int(input.split('C')[2][4:7])
+            # self.log(f"C0 is {ConvState[0]} at speed {ConvSpeed[0]}| C1 is {ConvState[1]} at speed {ConvSpeed[1]}", "Instruction", "debug")
 
-        # Split input by 'C' to separate conveyor data
-        #C0M{mode}S{speed}C1M{mode}S{speed}
-        # Mode is 1 digit start from 0 to 2
-        # Speed is 3 digit start from 000 to 255
-        # input.split('C') return ['PS00D000S01D000S02D000S03D000S04D000S05D000', '0M0S000', '1M0S000']
-        # print (input.split('C'))
-        # print (f"CVState0: {input.split('C')[1][2:3]} | CVSpeed0: {input.split('C')[1][4:7]} | CVState1: {input.split('C')[2][2:3]} | CVSpeed1: {input.split('C')[2][4:7]}")
-        ConvState[0] = int(input.split('C')[1][2:3])
-        ConvSpeed[0] = int(input.split('C')[1][4:7])
-        ConvState[1] = int(input.split('C')[2][2:3])
-        ConvSpeed[1] = int(input.split('C')[2][4:7])
-        # self.log(f"C0 is {ConvState[0]} at speed {ConvSpeed[0]}| C1 is {ConvState[1]} at speed {ConvSpeed[1]}", "Instruction", "debug")
+            if input.startswith("PS"):
+                Mode = 1
+            elif input.startswith("PF"):
+                Mode = 2
 
-        if input.startswith("PS"):
-            Mode = 1
-        elif input.startswith("PF"):
-            Mode = 2
+            instruction = f"[Instruction] {'Smooth' if Mode == 1 else 'Force'}"
+            servo_info = ', '.join([f"S{i} at {degree} degree" for i, degree in enumerate(ServoDegree)])
+            conveyor_info = ', '.join([f"Conveyor {i} is {'forward' if mode == 1 else 'stop' if mode == 0 else 'backward'}" for i, mode in enumerate(ConvState)])
+            isCompleteReading = True
+        except Exception as e:
+            self.log(f"Error while extracting instruction: {e}", "Error", "error")
+            self.log(f"Input: {input}", "Error", "error")
+            isCompleteReading = False
 
-        instruction = f"[Instruction] {'Smooth' if Mode == 1 else 'Force'}"
-        servo_info = ', '.join([f"S{i} at {degree} degree" for i, degree in enumerate(ServoDegree)])
-        conveyor_info = ', '.join([f"Conveyor {i} is {'forward' if mode == 1 else 'stop' if mode == 0 else 'backward'}" for i, mode in enumerate(ConvState)])
-        self.current_status["servo"] = ServoDegree
-        self.current_status["conv"]["mode"] = ConvState
-        self.current_status["conv"]["speed"] = ConvSpeed
+        if not isCompleteReading:
+            self.current_status["servo"] = ServoDegree
+            self.current_status["conv"]["mode"] = ConvState
+            self.current_status["conv"]["speed"] = ConvSpeed
+        else:
+            self.current_status["servo"] = ServoDegree
+            self.current_status["conv"]["mode"] = ConvState
+            self.current_status["conv"]["speed"] = ConvSpeed
         return f"{instruction} {servo_info}, {conveyor_info}"
 
 

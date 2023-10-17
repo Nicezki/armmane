@@ -17,6 +17,8 @@ class ArmMane:
             "idle" : True,
             "start" : 0,
             "mode" : 0,
+            "drop" : None,
+            "shape" : False,
             "items": [
                 2,2,2,
             ]
@@ -52,7 +54,7 @@ class ArmMane:
         # Stop the thread
         if(threading.Thread(target=self.autoMane).is_alive()):
             logger.debug("Auto mode thread is alive, stop it")
-            threading.Thread(target=self.autoMane).kill()
+            threading.Thread(target=self.autoMane).join()
         else:
             logger.debug("Auto mode thread is not alive, do nothing")
             return
@@ -103,6 +105,7 @@ class ArmMane:
                 logger.debug(f"Delay for {delay_time} seconds")
                 # Wait for the delay time
                 time.sleep(float(delay_time))
+                
             else:
                 logger.debug(f"Prepare to send instuction {step} to serial")
                 #If serial is busy, wait until it's idle
@@ -139,10 +142,10 @@ class ArmMane:
         elif step == 1: #Grab from the box
             for i, item in enumerate(self.status["items"]):
                 if(item == 0):
-                    logger.debug(f"Box number {i} is empty! Skippping this box")
+                    logger.debug(f"Box number {i+1} is empty! Skippping this box")
                     continue
                 else:
-                    logger.debug(f"Box number {i} now has {item} items, Proceed to grab the item")
+                    logger.debug(f"Box number {i+1} now has {item} items, Proceed to grab the item")
                     self.grabBox(i)
                     break
         
@@ -151,35 +154,66 @@ class ArmMane:
 
         elif step == 3: #Move the conveyor
             self.stepControl(3)
-            #Open camera
-            self.tfma.startCamera()
-            if(self.sysm.running["detect_flag"]):
-                logger.debug("Shape detected, proceed to next step")
-            else:
-                logger.debug("Shape not detected")
+            
+        elif step == 4: #Detect the shape
+           
             # Wait for sensor to detect the item
             logger.debug("Waiting for the sensor to detect the item")
             while(not self.seri.current_status["sensor"]):
                 time.sleep(0.1)
-            logger.debug("Item detected, proceed to next step")
-            # Stop the camera
-            #self.tfma.killThread()
             
-            
-        elif step == 4: #Detect the shape
             self.stepControl(4)
-            #Detect the shape
-            # if(self.sysm.running["detect_flag"]):
-            #     logger.debug("Shape detected, proceed to next step")
-            # else:
-            #     logger.debug("Shape not detected")
+            logger.debug("Item detected")
 
-        
+            #Open camera
+            self.tfma.startCamera()
+            time.sleep(3)
+            #Detect the item
+            self.tfma.startDetect()
+            time.sleep(3)
+            result = self.sysm.running["current_result"].split['_']
+            #Chose which box to be drop
+            if (self.status["shape"]) :
+                if result[1] == "Square":
+                    self.status["drop"] = 0
+                elif result[1] == "Triangle":
+                    self.status["drop"] = 1
+                elif result[1] == "Cylinder":
+                    self.status["drop"] = 2
+            else :
+                if result[0] == "Red":
+                    self.status["drop"] = 0
+                elif result[0] == "White":
+                    self.status["drop"] = 1
+                elif result[0] == "Blue":
+                    self.status["drop"] = 2
+            logger.debug(f"drop box : {self.status['drop']} ")
+
+            if(self.sysm.running["detect_flag"]):
+                if(self.status["shape"]):
+                    logger.debug("Shape detected, Stop detection and camera for better performance :)")
+                else:
+                    logger.debug("Color detected, Stop detection and camera for better performance :)")
+                # Stop the camera
+                self.tfma.stopDetect()
+                self.tfma.stopCamera()
+                logger.debug("Proceed to next step")
+                self.stepControl(4.1)
+                
+            else:
+                if(self.status["shape"]):
+                    logger.debug("Can not detect any shape")
+                else:
+                    logger.debug("Can not detect any color")
+                logger.debug("Instruction Failed, Proceed back to step 1")
+                self.tfma.stopDetect()
+                self.tfma.stopCamera()
+                self.status["step"] = 1
+            
         elif step == 5: #Place the item in the box
-            self.stepControl(5)
             # If shape is detected, place the item in the box according to the shape
-            logger.debug("Prepare to place the item in the box")
-
+            logger.debug("Prepare to drop the item in the box")
+            self.dropBox(self.status["drop"])
 
     def grabBox(self,box_number):
         # Check if the box is empty
@@ -221,24 +255,40 @@ class ArmMane:
             logger.debug(f"Box number {box_number} now has {self.status['items'][box_number]} items")
             return True
             
-    def DropBox(self,box_number):
-         for step in self.sysm.app_config.get("drop_step","drop"+str(box_number)):
-                # If the instruction example are: delay0.0 or delay1 or delay0.55
-                if(step.startswith("delay")):
-                    # Split the instruction to get the delay time
-                    delay_time = step.split("delay")[1]
-                    logger.debug(f"Delay for {delay_time} seconds")
-                    # Wait for the delay time
-                    time.sleep(float(delay_time))
-                else:
-                    logger.debug(f"Prepare to send instuction {step} to serial")
-                    #If serial is busy, wait until it's idle
-                    while(self.seri.current_status["busy"]):
-                        time.sleep(0.1)
-                    # Send the instruction to the serial
-                    self.seri.piInstruction(step)
-                    logger.debug(f"Instuction {step} sent to serial for execution")
-        
+    def dropBox(self,box_number):
+        for step in self.sysm.app_config.get("drop_step","drop"+str(box_number)):
+            # If the instruction example are: delay0.0 or delay1 or delay0.55
+            if(step.startswith("delay")):
+                # Split the instruction to get the delay time
+                delay_time = step.split("delay")[1]
+                logger.debug(f"Delay for {delay_time} seconds")
+                # Wait for the delay time
+                time.sleep(float(delay_time))
+            else:
+                logger.debug(f"Prepare to send instuction {step} to serial")
+                #If serial is busy, wait until it's idle
+                while(self.seri.current_status["busy"]):
+                    time.sleep(0.1)
+                # Send the instruction to the serial
+                self.seri.piInstruction(step)
+                logger.debug(f"Instuction {step} sent to serial for execution")
+            
+        # Wait for the drop to finish
+        logger.debug(f"Waiting for the drop to box number {box_number} to finish")
+        finish_count = 0
+        while(self.seri.current_status["busy"] or finish_count <10):
+            time.sleep(0.1)
+            if(self.seri.current_status["busy"]):
+                logger.debug("Instruction still running, Waiting for it to finish")
+                finish_count = 0
+            else:
+                finish_count += 1
+                
+        logger.debug(f"Drop to box number {box_number} finished")
+        # Update the box status
+        self.status["items"][box_number] += 1
+        logger.debug(f"Box number {box_number} now has {self.status['items'][box_number]} items")
+        return True
 
 
                 
