@@ -92,8 +92,8 @@ class SeriMane:
 
 
     def prepare(self):
-        self.checkCurrentState()
-        self.checkBusy()
+        self.compat_checkCurrentState()
+        self.compat_checkBusy()
         # Start a thread for obstacle detection
         if platform.system() != "Linux":
             self.log("Windows detected, skipping obstacle detection", "Windows", "warning")
@@ -239,6 +239,27 @@ class SeriMane:
                     self.checkCurrentState()
                     self.checkBusy()
                     continue
+                # INST{number} is the instruction number start from 0 and increase by 1 every time the instruction is sent
+                if line.startswith("INST"):
+                    self.current_status["instruction"] = line
+                    continue
+
+
+    def compat_receiveMessages(self):
+        while True:
+            if self.arduino:
+                line = str(self.arduino.readline().decode().strip())
+                # If the line is empty, skip it
+                if not line:
+                    continue
+                #self.log(f"-->> Received message from Arduino: {line}", "Received", "debug")
+                # If the line is "Ready!", set isArduinoReady to True
+                if line == "Ready!":
+                    self.current_status["ready"] = True
+                    self.log("Arduino is ready.", "Ready", "success")
+                    self.compat_checkCurrentState()
+                    self.compat_checkBusy()
+                    continue
                 if line == "PB":
                     self.current_status["busy"] = True
                     self.log("Arduino is busy.", "Busy", "warning")
@@ -250,20 +271,20 @@ class SeriMane:
                     continue
                 if line.startswith("PS") or line.startswith("PF"):
                     logger.info(f"Status received: {line}")
-                    self.current_status["instruction"] = self.extractInstruction(line)
+                    self.current_status["instruction"] = self.compat_extractInstruction(line)
                     self.current_status["statuscode"] = line
                 else: self.log(f"{line}", "Arduino", "debug")
             else:
                 self.log("Arduino not found, cannot receive message.", "Error", "trace")
                 return None
                 
-    def checkCurrentState(self):
+    def compat_checkCurrentState(self):
         self.sendMessageToArduino("PC")
         
-    def checkBusy(self):
+    def compat_checkBusy(self):
         self.sendMessageToArduino("PB")
 
-    def piInstruction(self, action):
+    def compat_piInstruction(self, action):
         instruction = self.sysmane.app_config.get("instructions")
 
         #Check if the action is in the instruction list if not return error
@@ -280,7 +301,92 @@ class SeriMane:
         self.log(f"Instruction sent: {old_format}")
 
 
+    def setSmoothServo(self, servo, degree):
+        # Check if the servo is in range
+        if servo < 0 or servo > int(self.sysmane.app_config.get("servo_count")):
+            self.log(f"Servo {servo} not in range (0, {self.sysmane.app_config.get('servo_count')})", "Error", "error")
+            return None
+        if degree < int(self.sysmane.app_config.get("servo_min_degree")) or degree > int(self.sysmane.app_config.get("servo_max_degree")):
+            self.log(f"Degree {degree} not in range ({self.sysmane.app_config.get('servo_min_degree')}, {self.sysmane.app_config.get('servo_max_degree')})", "Error", "error")
+            return None
+
+        # Smoothly move the servo to the desired degree
+        # Desired degree is the degree that we want to move to
+        desired_degree = degree
+        # Current degree is the current degree of the servo
+        current_degree = self.current_status["servo"][servo]
+        # Step is the number of steps that we want to move
+        step = int(self.sysmane.app_config.get("servo_step"))
+        # Delay is the delay between each step
+        delay = float(self.sysmane.app_config.get("servo_delay"))
+        # Calculate the difference between the desired degree and current degree
+        degree_diff = desired_degree - current_degree
+        # Calculate the number of steps needed to move
+        step_count = abs(int(degree_diff / step))
+        # Calculate the direction of the movement
+        direction = 1 if degree_diff > 0 else -1
+        # Calculate the delay between each step
+        delay = delay / step_count
+        # Move the servo
+        for i in range(step_count):
+            current_degree += step * direction
+            self.setServo(servo, current_degree)
+            time.sleep(delay)
+        # Set the servo to the desired degree
+        self.setServo(servo, desired_degree)
+
+
     def setServo(self, servo, degree):
+        # New output serial format is {servo0}{servo1}{servo2}{servo3}{servo4}{servo5}{conv0mode}{conv0speed}{conv1mode}{conv1speed}
+        # Example: 18018018018018018012551255        
+        # Check if the servo is in range
+        if servo < 0 or servo > int(self.sysmane.app_config.get("servo_count")):
+            self.log(f"Servo {servo} not in range (0, {self.sysmane.app_config.get('servo_count')})", "Error", "error")
+            return None
+        if degree < int(self.sysmane.app_config.get("servo_min_degree")) or degree > int(self.sysmane.app_config.get("servo_max_degree")):
+            self.log(f"Degree {degree} not in range ({self.sysmane.app_config.get('servo_min_degree')}, {self.sysmane.app_config.get('servo_max_degree')})", "Error", "error")
+            return None
+
+        # Prepare the output string based on the current status and the desired servo and degree
+        # Example: setServo(0, 180) will set servo 0 to 180 degree
+        # If last status is 17918018018018018012551255
+        # so the output string will be 18018018018018018012551255 (change the first 3 digits)
+
+        # Convert the degree to 3 digits
+        degree = str(degree).zfill(3)
+
+        if servo == 0:
+            # If servo 0, replace the first 3 digits
+            output = degree + self.current_status["servo"][1].zfill(3) + self.current_status["servo"][2].zfill(3) + self.current_status["servo"][3].zfill(3) + self.current_status["servo"][4].zfill(3) + self.current_status["servo"][5].zfill(3) + str(self.current_status["conv"]["mode"][0]) + str(self.current_status["conv"]["speed"][0]).zfill(3) + str(self.current_status["conv"]["mode"][1]) + str(self.current_status["conv"]["speed"][1]).zfill(3)
+        elif servo == 1:
+            # If servo 1, replace the second 3 digits
+            output = self.current_status["servo"][0].zfill(3) + degree + self.current_status["servo"][2].zfill(3) + self.current_status["servo"][3].zfill(3) + self.current_status["servo"][4].zfill(3) + self.current_status["servo"][5].zfill(3) + str(self.current_status["conv"]["mode"][0]) + str(self.current_status["conv"]["speed"][0]).zfill(3) + str(self.current_status["conv"]["mode"][1]) + str(self.current_status["conv"]["speed"][1]).zfill(3)
+        elif servo == 2:
+            # If servo 2, replace the third 3 digits
+            output = self.current_status["servo"][0].zfill(3) + self.current_status["servo"][1].zfill(3) + degree + self.current_status["servo"][3].zfill(3) + self.current_status["servo"][4].zfill(3) + self.current_status["servo"][5].zfill(3) + str(self.current_status["conv"]["mode"][0]) + str(self.current_status["conv"]["speed"][0]).zfill(3) + str(self.current_status["conv"]["mode"][1]) + str(self.current_status["conv"]["speed"][1]).zfill(3)
+        elif servo == 3:
+            # If servo 3, replace the fourth 3 digits
+            output = self.current_status["servo"][0].zfill(3) + self.current_status["servo"][1].zfill(3) + self.current_status["servo"][2].zfill(3) + degree + self.current_status["servo"][4].zfill(3) + self.current_status["servo"][5].zfill(3) + str(self.current_status["conv"]["mode"][0]) + str(self.current_status["conv"]["speed"][0]).zfill(3) + str(self.current_status["conv"]["mode"][1]) + str(self.current_status["conv"]["speed"][1]).zfill(3)
+        elif servo == 4:
+            # If servo 4, replace the fifth 3 digits
+            output = self.current_status["servo"][0].zfill(3) + self.current_status["servo"][1].zfill(3) + self.current_status["servo"][2].zfill(3) + self.current_status["servo"][3].zfill(3) + degree + self.current_status["servo"][5].zfill(3) + str(self.current_status["conv"]["mode"][0]) + str(self.current_status["conv"]["speed"][0]).zfill(3) + str(self.current_status["conv"]["mode"][1]) + str(self.current_status["conv"]["speed"][1]).zfill(3)
+        elif servo == 5:
+            # If servo 5, replace the sixth 3 digits
+            output = self.current_status["servo"][0].zfill(3) + self.current_status["servo"][1].zfill(3) + self.current_status["servo"][2].zfill(3) + self.current_status["servo"][3].zfill(3) + self.current_status["servo"][4].zfill(3) + degree + str(self.current_status["conv"]["mode"][0]) + str(self.current_status["conv"]["speed"][0]).zfill(3) + str(self.current_status["conv"]["mode"][1]) + str(self.current_status["conv"]["speed"][1]).zfill(3)
+        else:
+            self.log(f"Servo {servo} not in range (0, {self.sysmane.app_config.get('servo_count')})", "Error", "error")
+            return None
+        
+        # Set current_status["servo"] to the new degree
+        self.current_status["servo"][servo] = degree
+
+        # Send the instruction to Arduino
+        self.sendMessageToArduino(output)
+
+
+    # TODO : Add support for conveyor
+
+    def compat_setServo(self, servo, degree):
         # Check if the servo is in range
         if servo < 0 or servo > int(self.sysmane.app_config.get("servo_count")):
             self.log(f"Servo {servo} not in range (0, {self.sysmane.app_config.get('servo_count')})", "Error", "error")
@@ -300,7 +406,11 @@ class SeriMane:
         # Send the instruction to Arduino with PIS(Servo)D(Degree)
         self.sendMessageToArduino(f"PXS{servo}D{degree}>END")
 
-    def setConveyor(self, conveyor, mode=None, speed=None):
+
+
+        
+
+    def compat_setConveyor(self, conveyor, mode=None, speed=None):
         if mode is None and speed is None:
             self.log(f"Conveyor {conveyor} is not set", "Error", "error")
             return None
@@ -339,7 +449,7 @@ class SeriMane:
             self.arduino.close()
             self.log("Serial connection to Arduino closed.", "Closed", "info")
 
-    def extractInstruction(self, input):
+    def compat_extractInstruction(self, input):
         Mode = 0
         ServoDegree = [0, 0, 0, 0, 0, 0]
         ConvState = [0, 0]

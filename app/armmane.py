@@ -104,9 +104,10 @@ class ArmMane:
                 delay_time = step.split("delay")[1]
                 logger.debug(f"Delay for {delay_time} seconds")
                 # Wait for the delay time
-                time.sleep(float(delay_time))
+                # time.sleep(float(delay_time))
                 
             else:
+                time.sleep(8)
                 logger.debug(f"Prepare to send instuction {step} to serial")
                 #If serial is busy, wait until it's idle
                 while(self.seri.current_status["busy"]):
@@ -139,6 +140,7 @@ class ArmMane:
 
         if step == 0 : #Reset the arm to the initial position
             self.stepControl(0)
+        
         elif step == 1: #Grab from the box
             for i, item in enumerate(self.status["items"]):
                 if(item == 0):
@@ -146,6 +148,7 @@ class ArmMane:
                     continue
                 else:
                     logger.debug(f"Box number {i+1} now has {item} items, Proceed to grab the item")
+                    self.currentBox = i
                     self.grabBox(i)
                     break
         
@@ -170,24 +173,25 @@ class ArmMane:
             time.sleep(3)
             #Detect the item
             self.tfma.startDetect()
-            time.sleep(3)
-            result = self.sysm.running["current_result"].split['_']
-            #Chose which box to be drop
-            if (self.status["shape"]) :
-                if result[1] == "Square":
-                    self.status["drop"] = 0
-                elif result[1] == "Triangle":
-                    self.status["drop"] = 1
-                elif result[1] == "Cylinder":
-                    self.status["drop"] = 2
-            else :
-                if result[0] == "Red":
-                    self.status["drop"] = 0
-                elif result[0] == "White":
-                    self.status["drop"] = 1
-                elif result[0] == "Blue":
-                    self.status["drop"] = 2
-            logger.debug(f"drop box : {self.status['drop']} ")
+            time.sleep(5)
+            if self.sysm.running["current_result"] != None:
+                result = self.sysm.running["current_result"].split['_']
+                #Chose which box to be drop
+                if (self.status["shape"]) :
+                    if result[1] == "Square":
+                        self.status["drop"] = 0
+                    elif result[1] == "Triangle":
+                        self.status["drop"] = 1
+                    elif result[1] == "Cylinder":
+                        self.status["drop"] = 2
+                else :
+                    if result[0] == "Red":
+                        self.status["drop"] = 0
+                    elif result[0] == "White":
+                        self.status["drop"] = 1
+                    elif result[0] == "Blue":
+                        self.status["drop"] = 2
+                logger.debug(f"drop box : {self.status['drop']} ")
 
             if(self.sysm.running["detect_flag"]):
                 if(self.status["shape"]):
@@ -196,6 +200,7 @@ class ArmMane:
                     logger.debug("Color detected, Stop detection and camera for better performance :)")
                 # Stop the camera
                 self.tfma.stopDetect()
+                time.sleep(3)
                 self.tfma.stopCamera()
                 logger.debug("Proceed to next step")
                 self.stepControl(4.1)
@@ -207,9 +212,11 @@ class ArmMane:
                     logger.debug("Can not detect any color")
                 logger.debug("Instruction Failed, Proceed back to step 1")
                 self.tfma.stopDetect()
+                time.sleep(3)
                 self.tfma.stopCamera()
+                self.status["items"][self.currentBox] += 1
                 self.status["step"] = 1
-            
+
         elif step == 5: #Place the item in the box
             # If shape is detected, place the item in the box according to the shape
             logger.debug("Prepare to drop the item in the box")
@@ -231,6 +238,7 @@ class ArmMane:
                     # Wait for the delay time
                     time.sleep(float(delay_time))
                 else:
+                    time.sleep(10)
                     logger.debug(f"Prepare to send instuction {step} to serial")
                     #If serial is busy, wait until it's idle
                     while(self.seri.current_status["busy"]):

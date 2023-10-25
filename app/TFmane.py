@@ -39,7 +39,7 @@ class VideoStream:
         # Read first frame from the stream
         self.frame = self.stream.read()
 
-	# Variable to control when the camera is stopped
+	    # Variable to control when the camera is stopped
         self.stopped = False
 
     def __del__(self):
@@ -107,6 +107,9 @@ class TFMane:
         }
 
         self.setup()
+        threading.Thread(target=self.detect).start()
+        threading.Thread(target=self.detect).daemon
+
 
 
     def setupCamera(self):
@@ -215,10 +218,6 @@ class TFMane:
                 time.sleep(1)
         return True
     
-
-
-        
-
     def setup(self):
         logger.info("[TFMaid] setting up")
         self.system_info = platform.system()
@@ -270,10 +269,12 @@ class TFMane:
 
         #for frame1 in camera.capture_continuous(rawCapture, format="bgr",use_video_port=True):
         while True:
+
             if self.current_status['detect_running'] == False:
                 time.sleep(1)
                 continue
-
+            logger.info("HI")
+            
             # Start timer (for calculating frame rate)
             t1 = cv2.getTickCount()
 
