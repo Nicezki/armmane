@@ -107,10 +107,8 @@ class TFMane:
         }
 
         self.setup()
-        threading.Thread(target=self.detect).start()
-        threading.Thread(target=self.detect).daemon
-
-
+        self.setupDetect()
+        
 
     def setupCamera(self):
         debugrun = False
@@ -196,6 +194,11 @@ class TFMane:
 
     def startDetect(self):
         self.current_status['detect_running'] = True
+    
+    def setupDetect(self):
+        detect_thread = threading.Thread(target=self.detect)
+        detect_thread.daemon = True
+        detect_thread.start()
 
 
     def stopCamera(self):
@@ -255,10 +258,10 @@ class TFMane:
     
 
         
-    def detect(self):
-        if self.video is None:
-            logger.info("[TFMaid] Detect that video is not ready,  So now It's been closed")
-            return False
+    def  detect(self):
+        # if self.video is None:
+        #     logger.info("[TFMaid] Detect that video is not ready,  So now It's been closed")
+        #     return False
         
         self.close = False
         logger.info("[TFMaid] Detecting")

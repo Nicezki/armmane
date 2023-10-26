@@ -104,16 +104,16 @@ class ArmMane:
                 delay_time = step.split("delay")[1]
                 logger.debug(f"Delay for {delay_time} seconds")
                 # Wait for the delay time
-                # time.sleep(float(delay_time))
+                time.sleep(float(delay_time))
                 
             else:
-                time.sleep(8)
+
                 logger.debug(f"Prepare to send instuction {step} to serial")
                 #If serial is busy, wait until it's idle
                 while(self.seri.current_status["busy"]):
                     time.sleep(0.1)
                 # Send the instruction to the serial
-                self.seri.piInstruction(step)
+                self.seri.piInstructionPreset(step)
                 logger.debug(f"Instuction {step} sent to serial for execution")
 
         # Wait for the reset to finish
@@ -175,9 +175,12 @@ class ArmMane:
             self.tfma.startDetect()
             time.sleep(5)
             if self.sysm.running["current_result"] != None:
+                logger.debug("HIII")
                 result = self.sysm.running["current_result"].split['_']
+                logger.debug(result)
                 #Chose which box to be drop
                 if (self.status["shape"]) :
+                    logger.debug("IN SHAPE")
                     if result[1] == "Square":
                         self.status["drop"] = 0
                     elif result[1] == "Triangle":
@@ -185,6 +188,7 @@ class ArmMane:
                     elif result[1] == "Cylinder":
                         self.status["drop"] = 2
                 else :
+                    logger.debug("IN COLOR")
                     if result[0] == "Red":
                         self.status["drop"] = 0
                     elif result[0] == "White":
@@ -204,7 +208,6 @@ class ArmMane:
                 self.tfma.stopCamera()
                 logger.debug("Proceed to next step")
                 self.stepControl(4.1)
-                
             else:
                 if(self.status["shape"]):
                     logger.debug("Can not detect any shape")
@@ -220,7 +223,7 @@ class ArmMane:
         elif step == 5: #Place the item in the box
             # If shape is detected, place the item in the box according to the shape
             logger.debug("Prepare to drop the item in the box")
-            self.dropBox(self.status["drop"])
+            self. (self.status["drop"])
 
     def grabBox(self,box_number):
         # Check if the box is empty
@@ -244,7 +247,7 @@ class ArmMane:
                     while(self.seri.current_status["busy"]):
                         time.sleep(0.1)
                     # Send the instruction to the serial
-                    self.seri.piInstruction(step)
+                    self.seri.piInstructionPreset(step)
                     logger.debug(f"Instuction {step} sent to serial for execution")
             # Wait for the grab to finish
             logger.debug(f"Waiting for the grab from box number {box_number} to finish")
@@ -278,7 +281,7 @@ class ArmMane:
                 while(self.seri.current_status["busy"]):
                     time.sleep(0.1)
                 # Send the instruction to the serial
-                self.seri.piInstruction(step)
+                self.seri.translatePiInstruction(step)
                 logger.debug(f"Instuction {step} sent to serial for execution")
             
         # Wait for the drop to finish

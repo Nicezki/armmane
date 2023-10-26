@@ -4,7 +4,7 @@
     "current_model": "rmutt_model1",
     "serial_buadrate": "115200",
     "servo_step" : "1",
-    "servo_delay" : "100",
+    "servo_delay" : "0.05",
     "servo_count" : "5",
     "servo_max_degree" : "180",
     "servo_min_degree" : "0",
@@ -76,13 +76,13 @@
     },
     "grab_step":{
         "grab0" : [
-            "preGetA","getA","postGetA"
+            "preGetA","delay3", "getA", "delay3","postGetA"
         ],
         "grab1" : [
-            "preGetB","delay8","getB","delay8","postGetB"
+            "preGetB","delay3","getB","delay3","postGetB"
         ],
         "grab2" : [
-            "preGetC","delay8","getC","delay8","postGetC"
+            "preGetC","delay3","getC","delay3","postGetC"
         ]
     },
     "instructions": {

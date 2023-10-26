@@ -231,7 +231,7 @@ async def command_servo(servo: int, angle: int):
                 "message": "Angle must be between {} and {}".format(sys.app_config.get("servo_min_degree"), sys.app_config.get("servo_max_degree"))
             }
         )
-    seri.setServo(servo, angle)
+    seri.setSmoothServo(servo, angle)
     return JSONResponse(
         status_code=200,
         content={
@@ -330,42 +330,42 @@ async def command_preset(preset: str):
         }
     )
     
-@app.get("/command/px/{instruction}", tags=["Command Deprecated"], description="Set multi-instruction (ElonX-instruction) to control the arm")
-@app.post("/command/px/{instruction}", tags=["Command"], description="Set multi-instruction (ElonX-instruction) to control the arm")
-async def command_px(instruction: str):
-    seri.sendMessageToArduino("PX" + instruction + ">END")
-    return JSONResponse(
-        status_code=200,
-        content={
-            "status": "success",
-            "message": "Set instruction {}".format(instruction)
-        }
-    )
+# @app.get("/command/px/{instruction}", tags=["Command Deprecated"], description="Set multi-instruction (ElonX-instruction) to control the arm")
+# @app.post("/command/px/{instruction}", tags=["Command"], description="Set multi-instruction (ElonX-instruction) to control the arm")
+# async def command_px(instruction: str):
+#     seri.sendMessageToArduino("PX" + instruction + ">END")
+#     return JSONResponse(
+#         status_code=200,
+#         content={
+#             "status": "success",
+#             "message": "Set instruction {}".format(instruction)
+#         }
+#     )
 
-@app.get("/command/pi/{instruction}", tags=["Command Deprecated"], description="Set single-instruction (Elon-instruction) to control the arm")
-@app.post("/command/pi/{instruction}", tags=["Command"], description="Set single-instruction (Elon-instruction) to control the arm")
-async def command_pi(instruction: str):
-    seri.sendMessageToArduino("PI" + instruction)
-    return JSONResponse(
-        status_code=200,
-        content={
-            "status": "success",
-            "message": "Set instruction {}".format(instruction)
-        }
-    )
+# @app.get("/command/pi/{instruction}", tags=["Command Deprecated"], description="Set single-instruction (Elon-instruction) to control the arm")
+# @app.post("/command/pi/{instruction}", tags=["Command"], description="Set single-instruction (Elon-instruction) to control the arm")
+# async def command_pi(instruction: str):
+#     seri.sendMessageToArduino("PI" + instruction)
+#     return JSONResponse(
+#         status_code=200,
+#         content={
+#             "status": "success",
+#             "message": "Set instruction {}".format(instruction)
+#         }
+#     )
     
 
-@app.get("/command/reset", tags=["Command Deprecated"], description="Reset arm to default waiting position")
-@app.post("/command/reset", tags=["Command"], description="Reset arm to default waiting position")
-async def command_reset():
-    seri.resetServo()
-    return JSONResponse(
-        status_code=200,
-        content={
-            "status": "success",
-            "message": "Reset arm"
-        }
-    )
+# @app.get("/command/reset", tags=["Command Deprecated"], description="Reset arm to default waiting position")
+# @app.post("/command/reset", tags=["Command"], description="Reset arm to default waiting position")
+# async def command_reset():
+#     seri.resetServo()
+#     return JSONResponse(
+#         status_code=200,
+#         content={
+#             "status": "success",
+#             "message": "Reset arm"
+#         }
+#     )
 
 @app.get("/mode/{mode}", tags=["Status"], description="Set mode of arm (manual or auto)")
 async def mode(mode: str):
