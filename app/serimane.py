@@ -5,6 +5,7 @@ from loguru import logger
 import platform
 import RPi.GPIO as GPIO
 import time
+import psutil
 
 
 class SeriMane:
@@ -28,11 +29,25 @@ class SeriMane:
             "instruction" : None,
             "status" : "Initualizing",
             "message" : "Initualizing Arduino connection",
-            "queue" : []
+            "queue" : [],
+            "system": {
+                "os": platform.system(),
+                "version": platform.version(),
+                "release": platform.release(),
+                "machine": platform.machine(),
+                "processor": platform.processor(),
+                "python_version": platform.python_version(),
+                "cpu_usage": psutil.cpu_percent(),
+                "memory_usage": psutil.virtual_memory().percent,
+                "disk_usage": psutil.disk_usage('/').percent,
+                "network": psutil.net_io_counters()
+            }
         }
+
         self.sensor = None
         self.arduino_port = None
         self.arduino = None
+        self.extended_log = False
         while not self.arduino_port and self.arduino is None:
             self.initArduinoPort()
             time.sleep(1)
@@ -77,6 +92,13 @@ class SeriMane:
         # Clear the thread
         self.receive_thread = None
 
+    def updateSystemStatus(self):
+        while True:
+            self.current_status["system"]["cpu_usage"] = psutil.cpu_percent()
+            self.current_status["system"]["memory_usage"] = psutil.virtual_memory().percent
+            self.current_status["system"]["disk_usage"] = psutil.disk_usage('/').percent
+            self.current_status["system"]["network"] = psutil.net_io_counters()
+            time.sleep(5)
 
     def initArduinoPort(self):
         self.arduino_port = self.findArduinoPort()
@@ -93,6 +115,11 @@ class SeriMane:
 
 
     def prepare(self):
+        # Add thread for updating system status
+        self.system_thread = threading.Thread(target=self.updateSystemStatus)
+        self.system_thread.daemon = True
+        self.system_thread.start()
+
         # self.compat_checkCurrentState()
         # self.compat_checkBusy()
         # Start a thread for obstacle detection
@@ -108,6 +135,7 @@ class SeriMane:
             self.obstacle_thread.start()
             self.sensor_thread = threading.Thread(target=self.timeCount)
             self.sensor_thread.start()
+            
 
     def timeCount(self):
         time.sleep(5)
@@ -144,9 +172,6 @@ class SeriMane:
                 time.sleep(0.5)
                 continue
 
-            
-
-            
     def log(self, message, status=None, level="info"):
         # Store the status
         if status:
@@ -200,11 +225,13 @@ class SeriMane:
             #     self.log("Arduino is busy, cannot send message.", "Busy", "error")
             #     return "busy", self.current_status
             if self.arduino:
-                self.log(f"Sending message to Arduino: {message}", "Sending")
+                if self.extended_log:
+                    self.log(f"Sending message to Arduino: {message}", "Sending")
                 # self.log(f"<<-- Message sent to Arduino: {message}", "Sent", "debug")
                 try:
                     self.arduino.write((message + '\n').encode())  # Send the message to Arduino
-                    self.log(f"Message sent to Arduino: {message}", "Sent", "success")
+                    if self.extended_log:
+                        self.log(f"Message sent to Arduino: {message}", "Sent", "success")
                     return "ok", self.current_status
                 except Exception as e:
                     self.log(f"Error while sending message to Arduino: {e}", "Error", "error")
@@ -235,7 +262,8 @@ class SeriMane:
                 # If the line is empty, skip it
                 if not line:
                     continue
-                self.log(f"-->> Received message from Arduino: {line}", "Received", "debug")
+                if self.extended_log:
+                    self.log(f"-->> Received message from Arduino: {line}", "Received", "debug")
                 # If the line is "Ready!", set isArduinoReady to True
                 if line == "Ready!":
                     self.current_status["ready"] = True
@@ -539,12 +567,6 @@ class SeriMane:
         self.sendMessageToArduino(output)
 
 
-
-
-
-        
-        
-
     # def compat_setServo(self, servo, degree):
     #     # Check if the servo is in range
     #     if servo < 0 or servo > int(self.sysmane.app_config.get("servo_count")):
@@ -591,7 +613,6 @@ class SeriMane:
         
     #     if speed <0: speed = 0
     #     if speed > 255: speed = 255
-         
         
     #     # convert the mode to 1 digits
     #     mode = str(mode).zfill(1)

@@ -255,9 +255,7 @@ class TFMane:
                 logger.warning("Camera index {} is not available".format(index))
             index += 1
         return arr
-    
 
-        
     def  detect(self):
         # if self.video is None:
         #     logger.info("[TFMaid] Detect that video is not ready,  So now It's been closed")
@@ -276,7 +274,6 @@ class TFMane:
             if self.current_status['detect_running'] == False:
                 time.sleep(1)
                 continue
-            logger.info("HI")
             
             # Start timer (for calculating frame rate)
             t1 = cv2.getTickCount()

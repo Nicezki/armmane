@@ -3,8 +3,8 @@
     "model_folder": "models",
     "current_model": "rmutt_model1",
     "serial_buadrate": "115200",
-    "servo_step" : "1",
-    "servo_delay" : "0.05",
+    "servo_step" : "2",
+    "servo_delay" : "0.02",
     "servo_count" : "5",
     "servo_max_degree" : "180",
     "servo_min_degree" : "0",
@@ -48,19 +48,28 @@
             "grab_step"
         ],
         "step2" : [
-            "prePreDropBelt", "delay8","preDropBelt", "delay8","dropBelt", "delay8","postDropBelt"
+            "prePreDropBelt", "delay1", "preDropBelt", "delay1", "dropBelt", "delay1", "postDropBelt"
         ],
         "step3" : [
-            "moveConv"
+            "moveConvTop", "delay3", "stopConvTop"
         ],
         "step4" : [
-            "stopConv"
+            "moveConvBottom"
         ],
         "step4.1" : [
-            "prePreGrip","delay8"
+            "stopConvBottom"
+        ],
+        "step4.2" : [
+            "prePreGrip", "delay1"
+        ],
+        "step4.3" : [
+            "reverseConvBottom", "delay1", "stopConvBottom"
+        ],
+        "step4.4" : [
+            "moveConvBottom", "delay5", "stopConvBottom"
         ],
         "step5" : [
-            "preGrip", "delay8", "grip", "delay8", "liftUp", "delay8", "drop_step"
+            "preGrip", "delay1", "grip", "delay1", "liftUp", "delay1"
         ]
     },
     "drop_step":{
@@ -76,13 +85,13 @@
     },
     "grab_step":{
         "grab0" : [
-            "preGetA","delay3", "getA", "delay3","postGetA"
+            "preGetA", "delay1", "getA", "delay1", "postGetA"
         ],
         "grab1" : [
-            "preGetB","delay3","getB","delay3","postGetB"
+            "preGetB", "delay3" ,"getB", "delay3", "postGetB"
         ],
         "grab2" : [
-            "preGetC","delay3","getC","delay3","postGetC"
+            "preGetC", "delay3", "getC", "delay3", "postGetC"
         ]
     },
     "instructions": {
@@ -168,7 +177,7 @@
         },
         "postGetC": {
             "step": [
-                "S01D080","S03D060"
+                "S01D080", "S03D060"
             ]
         },
         "prePreDropBelt": {
@@ -201,14 +210,34 @@
                 "S05D045"
             ]
         },
-        "moveConv":{
+        "moveConvTop":{
             "step": [
-                "C0M1S255", "C1M1S255"
+                "C0M1S255"
             ]
         },
-        "stopConv":{
+        "reverseConvTop":{
             "step": [
-                "C0M0S000", "C1M0S000"
+                "C0M2S255"
+            ]
+        },
+        "moveConvBottom":{
+            "step": [
+                "C1M1S255"
+            ]
+        },
+        "reverseConvBottom":{
+            "step": [
+                "C1M2S255"
+            ]
+        },
+        "stopConvTop":{
+            "step": [
+                "C0M0S000"
+            ]
+        },
+        "stopConvBottom":{
+            "step": [
+                "C1M0S000"
             ]
         }
     }

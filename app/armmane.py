@@ -19,6 +19,7 @@ class ArmMane:
             "mode" : 0,
             "drop" : None,
             "shape" : False,
+            "error": 0,
             "items": [
                 2,2,2,
             ]
@@ -159,79 +160,109 @@ class ArmMane:
             self.stepControl(3)
             
         elif step == 4: #Detect the shape
-           
+            count = 0
+            self.stepControl(4)
             # Wait for sensor to detect the item
             logger.debug("Waiting for the sensor to detect the item")
-            while(not self.seri.current_status["sensor"]):
+            while(not self.seri.current_status["sensor"]["value"]):
+                count+1
                 time.sleep(0.1)
-            
-            self.stepControl(4)
-            logger.debug("Item detected")
-
-            #Open camera
-            self.tfma.startCamera()
-            time.sleep(3)
-            #Detect the item
-            self.tfma.startDetect()
-            time.sleep(5)
-            if self.sysm.running["current_result"] != None:
-                logger.debug("HIII")
-                result = self.sysm.running["current_result"].split['_']
-                logger.debug(result)
-                #Chose which box to be drop
-                if (self.status["shape"]) :
-                    logger.debug("IN SHAPE")
-                    if result[1] == "Square":
-                        self.status["drop"] = 0
-                    elif result[1] == "Triangle":
-                        self.status["drop"] = 1
-                    elif result[1] == "Cylinder":
-                        self.status["drop"] = 2
-                else :
-                    logger.debug("IN COLOR")
-                    if result[0] == "Red":
-                        self.status["drop"] = 0
-                    elif result[0] == "White":
-                        self.status["drop"] = 1
-                    elif result[0] == "Blue":
-                        self.status["drop"] = 2
-                logger.debug(f"drop box : {self.status['drop']} ")
-
-            if(self.sysm.running["detect_flag"]):
-                if(self.status["shape"]):
-                    logger.debug("Shape detected, Stop detection and camera for better performance :)")
-                else:
-                    logger.debug("Color detected, Stop detection and camera for better performance :)")
-                # Stop the camera
-                self.tfma.stopDetect()
-                time.sleep(3)
-                self.tfma.stopCamera()
-                logger.debug("Proceed to next step")
+                if count > 360:
+                    self.status["error"] = 404
+                    logger.error["No object on conveyor"]
+                    self.status["step"] = 1
+                    break
+               
+            if self.status["step"] == 4 :
+                self.status["error"] = 0
                 self.stepControl(4.1)
-            else:
-                if(self.status["shape"]):
-                    logger.debug("Can not detect any shape")
-                else:
-                    logger.debug("Can not detect any color")
-                logger.debug("Instruction Failed, Proceed back to step 1")
-                self.tfma.stopDetect()
+                logger.debug("Item detected")
+
+                #Open camera
+                self.tfma.startCamera()
+                time.sleep(1)
+                #Detect the item
+                self.tfma.startDetect()
                 time.sleep(3)
-                self.tfma.stopCamera()
-                self.status["items"][self.currentBox] += 1
-                self.status["step"] = 1
+                if self.sysm.running["current_classes"] != None:
+                    logger.debug("HIII")
+                    result = self.sysm.running["current_classes"].split("_")
+                    logger.debug(result)
+                    #Chose which box to be drop
+                    if (self.status["shape"]) :
+                        logger.debug("IN SHAPE")
+                        if result[1] == "Square":
+                            self.status["drop"] = 0
+                        elif result[1] == "Triangle":
+                            self.status["drop"] = 1
+                        elif result[1] == "Cylinder":
+                            self.status["drop"] = 2
+                    else :
+                        logger.debug("IN COLOR")
+                        if result[0] == "Red":
+                            self.status["drop"] = 0
+                        elif result[0] == "White":
+                            self.status["drop"] = 1
+                        elif result[0] == "Blue":
+                            self.status["drop"] = 2
+                    logger.debug(f"drop box : {self.status['drop']} ")
+
+                while True:
+                    if(self.sysm.running["detect_flag"]):
+                        if(self.status["shape"]):
+                            logger.debug("Shape detected, Stop detection and camera for better performance :)")
+                        else:
+                            logger.debug("Color detected, Stop detection and camera for better performance :)")
+                        # Stop the camera
+                        self.tfma.stopDetect()
+                        time.sleep(1)
+                        self.tfma.stopCamera()
+                        logger.debug("Proceed to next step")
+                        self.stepControl(4.4)
+                        self.stepControl(4.2)
+                        break
+                    else:
+                        if(self.status["shape"]):
+                            logger.debug("Can not detect any shape")
+                        else:
+                            logger.debug("Can not detect any color")
+
+                        logger.debug("Instruction Failed, trying to reverse the conveyor")
+                        self.status["error"]+1
+                        self.stepControl(4.3)
+                        self.stepControl(4)
+                        # self.status["step"] = 3
+                        # self.tfma.stopDetect()
+                        # time.sleep(1)
+                        # self.tfma.stopCamera()
+                        # self.status["items"][self.currentBox] += 1
+                        # self.status["step"] = 1
+                    
 
         elif step == 5: #Place the item in the box
+            self.stepControl(5)
             # If shape is detected, place the item in the box according to the shape
             logger.debug("Prepare to drop the item in the box")
-            self. (self.status["drop"])
+            if(self.status["drop"] == None):
+                logger.error("Drop box is not set, This indicate that the shape is not detected")
+                logger.warning("Instruction Failed, Trying to fill the random box that not have 2 items")
+                # If the shape is not detected, try to fill the box that not have 2 items
+                for i, item in enumerate(self.status["items"]):
+                    if(item < 2):
+                        self.dropBox(i)
+                        logger.warning(f"Trying to fill the box number {i+1} because it has {item} items")
+                        break
+                self.status["step"] = 1
+                return
+            self.dropBox(self.status["drop"])
 
     def grabBox(self,box_number):
         # Check if the box is empty
         if(self.status["items"][box_number] == 0):
-            logger.debug(f"Box number {box_number} is empty! Skippping this box")
+            logger.debug(f"Box number {box_number+1} is empty! Skippping this box")
             return False
         else:
-            logger.debug(f"Box number {box_number} now has {self.status['items'][box_number]} items, Proceed to grab the item")
+            logger.debug(f"Box number {box_number+1} now has {self.status['items'][box_number]} items, Proceed to grab the item")
             for step in self.sysm.app_config.get("grab_step","grab"+str(box_number)):
                 # If the instruction example are: delay0.0 or delay1 or delay0.55
                 if(step.startswith("delay")):
@@ -241,7 +272,6 @@ class ArmMane:
                     # Wait for the delay time
                     time.sleep(float(delay_time))
                 else:
-                    time.sleep(10)
                     logger.debug(f"Prepare to send instuction {step} to serial")
                     #If serial is busy, wait until it's idle
                     while(self.seri.current_status["busy"]):
@@ -263,7 +293,7 @@ class ArmMane:
             logger.debug(f"Grab from box number {box_number} finished")
             # Update the box status
             self.status["items"][box_number] -= 1
-            logger.debug(f"Box number {box_number} now has {self.status['items'][box_number]} items")
+            logger.debug(f"Box number {box_number+1} now has {self.status['items'][box_number]} items")
             return True
             
     def dropBox(self,box_number):
@@ -280,8 +310,10 @@ class ArmMane:
                 #If serial is busy, wait until it's idle
                 while(self.seri.current_status["busy"]):
                     time.sleep(0.1)
-                # Send the instruction to the serial
-                self.seri.translatePiInstruction(step)
+                # Lookup the instruction preset
+                # piInstructionPreset
+                self.seri.piInstructionPreset(step)
+                
                 logger.debug(f"Instuction {step} sent to serial for execution")
             
         # Wait for the drop to finish
@@ -298,7 +330,7 @@ class ArmMane:
         logger.debug(f"Drop to box number {box_number} finished")
         # Update the box status
         self.status["items"][box_number] += 1
-        logger.debug(f"Box number {box_number} now has {self.status['items'][box_number]} items")
+        logger.debug(f"Box number {box_number+1} now has {self.status['items'][box_number]} items")
         return True
 
 
