@@ -5,7 +5,7 @@
     "serial_buadrate": "115200",
     "servo_step" : "2",
     "servo_delay" : "0.02",
-    "servo_count" : "5",
+    "servo_count" : "6",
     "servo_max_degree" : "180",
     "servo_min_degree" : "0",
     "conveyor_count" : "1",
@@ -51,7 +51,7 @@
             "prePreDropBelt", "delay1", "preDropBelt", "delay1", "dropBelt", "delay1", "postDropBelt"
         ],
         "step3" : [
-            "moveConvTop", "delay3", "stopConvTop"
+            "moveConvTop", "delay1", "stopConvTop"
         ],
         "step4" : [
             "moveConvBottom"
@@ -66,7 +66,7 @@
             "reverseConvBottom", "delay1", "stopConvBottom"
         ],
         "step4.4" : [
-            "moveConvBottom", "delay5", "stopConvBottom"
+            "moveConvBottomSlow", "gateClose", "delay3", "stopConvBottom", "gateOpen"
         ],
         "step5" : [
             "preGrip", "delay1", "grip", "delay1", "liftUp", "delay1"
@@ -88,10 +88,10 @@
             "preGetA", "delay1", "getA", "delay1", "postGetA"
         ],
         "grab1" : [
-            "preGetB", "delay3" ,"getB", "delay3", "postGetB"
+            "preGetB", "delay1" ,"getB", "delay1", "postGetB"
         ],
         "grab2" : [
-            "preGetC", "delay3", "getC", "delay3", "postGetC"
+            "preGetC", "delay1", "getC", "delay1", "postGetC"
         ]
     },
     "instructions": {
@@ -225,6 +225,11 @@
                 "C1M1S255"
             ]
         },
+        "moveConvBottomSlow":{
+            "step": [
+                "C1M1S210"
+            ]
+        },
         "reverseConvBottom":{
             "step": [
                 "C1M2S255"
@@ -238,6 +243,16 @@
         "stopConvBottom":{
             "step": [
                 "C1M0S000"
+            ]
+        },
+        "gateOpen":{
+            "step": [
+                "S06D090"
+            ]
+        },
+        "gateClose":{
+            "step": [
+                "S06D000"
             ]
         }
     }

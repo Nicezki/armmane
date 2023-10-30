@@ -189,14 +189,24 @@ async def model_config(model_name: str):
     )
 
 
-@app.get("/status/arm", tags=["Status"], description="Return current status of arm like servo angle, conveyor mode, etc.")
+@app.get("/status/arm", tags=["Status"], description="Return current status of arm ")
 async def status_arm():
     return JSONResponse(
         status_code=200,
         content={
             "status": "success",
             "message": "Return status of arm",
-            "status_arm": seri.getCurrentStatus()
+            "status_arm": amn.getCurrentStatus()
+        }
+    )
+@app.get("/status/seri", tags=["Status"], description="Return current status of seri like servo angle, conveyor mode, etc.")
+async def status_seri():
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Return status of seri",
+            "status_seri": seri.getCurrentStatus()
         }
     )
 
@@ -321,7 +331,7 @@ async def command_preset(preset: str):
                 "message": "Preset not found"
             }
         )
-    seri.piInstruction(preset)
+    seri.piInstructionPreset(preset)
     return JSONResponse(
         status_code=200,
         content={
@@ -391,7 +401,8 @@ async def mode(mode: str):
 
 
 async def event_generator(request: Request):
-    last_status = {}
+    last_seri_status = {}
+    last_arm_status = {}
     yield {
         # Send connected message to client
         "data": json.dumps({"status": "connected"})
@@ -401,19 +412,27 @@ async def event_generator(request: Request):
         if await request.is_disconnected():
             break
         # Check if status changed
-        current_status = seri.getCurrentStatus()
+        current_seri_status = seri.getCurrentStatus()
+        current_arm_status = amn.getCurrentStatus()
         # print("current_status")
         # print(current_status['servo'])
         # print("last_status")
         # print(last_status['servo'])
         
         # Compare individual keys and values
-        if last_status != current_status:
-            # If client reconnects or status changes, send current_status to client
-            last_status = copy.deepcopy(current_status)
+        if last_seri_status != current_seri_status:
+            # If client reconnects or status changes, send current_seri_status to client
+            last_seri_status = copy.deepcopy(current_seri_status)
+            yield {
+                "event": "seri_status",
+                "data": json.dumps(current_seri_status)
+            }
+        if last_arm_status != current_arm_status:
+            # If client reconnects or status changes, send current_arm_status to client
+            last_arm_status = copy.deepcopy(current_arm_status)
             yield {
                 "event": "arm_status",
-                "data": json.dumps(current_status)
+                "data": json.dumps(current_arm_status)
             }
 
         await asyncio.sleep(0.1)

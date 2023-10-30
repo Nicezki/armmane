@@ -15,7 +15,7 @@ class SeriMane:
             "port" : None,
             "ready" : False,
             "busy" : False,
-            'servo' : [80,75,80,75,0,45],
+            'servo' : [80,75,80,75,0,45,0],
             'conv' : {
                 'mode' : [0,0],
                 'speed' : [0,0]
@@ -487,6 +487,7 @@ class SeriMane:
         servo3 = self.current_status["servo"][3]
         servo4 = self.current_status["servo"][4]
         servo5 = self.current_status["servo"][5]
+        servo6 = self.current_status["servo"][6]
         conv0mode = self.current_status["conv"]["mode"][0]
         conv0speed = self.current_status["conv"]["speed"][0]
         conv1mode = self.current_status["conv"]["mode"][1]
@@ -505,11 +506,13 @@ class SeriMane:
             servo4 = degree
         elif servo == 5:
             servo5 = degree
+        elif servo == 6:
+            servo6 = degree
         else:
             self.log(f"Servo {servo} not in range (0, {self.sysmane.app_config.get('servo_count')})", "Error", "error")
             return None
         
-        output = f"{str(servo0).zfill(3)}{str(servo1).zfill(3)}{str(servo2).zfill(3)}{str(servo3).zfill(3)}{str(servo4).zfill(3)}{str(servo5).zfill(3)}{conv0mode}{str(conv0speed).zfill(3)}{conv1mode}{str(conv1speed).zfill(3)}"
+        output = f"{str(servo0).zfill(3)}{str(servo1).zfill(3)}{str(servo2).zfill(3)}{str(servo3).zfill(3)}{str(servo4).zfill(3)}{str(servo5).zfill(3)}{str(servo6).zfill(3)}{conv0mode}{str(conv0speed).zfill(3)}{conv1mode}{str(conv1speed).zfill(3)}"
         
         # Set current_status["servo"] to the new degree
         self.current_status["servo"][servo] = int(degree)
@@ -539,6 +542,7 @@ class SeriMane:
         servo3 = self.current_status["servo"][3]
         servo4 = self.current_status["servo"][4]
         servo5 = self.current_status["servo"][5]
+        servo6 = self.current_status["servo"][6]
 
         conv0mode = self.current_status["conv"]["mode"][0]
         conv0speed = self.current_status["conv"]["speed"][0]
@@ -557,7 +561,7 @@ class SeriMane:
             return None
         
 
-        output = f"{str(servo0).zfill(3)}{str(servo1).zfill(3)}{str(servo2).zfill(3)}{str(servo3).zfill(3)}{str(servo4).zfill(3)}{str(servo5).zfill(3)}{conv0mode}{str(conv0speed).zfill(3)}{conv1mode}{str(conv1speed).zfill(3)}"
+        output = f"{str(servo0).zfill(3)}{str(servo1).zfill(3)}{str(servo2).zfill(3)}{str(servo3).zfill(3)}{str(servo4).zfill(3)}{str(servo5).zfill(3)}{str(servo6).zfill(3)}{conv0mode}{str(conv0speed).zfill(3)}{conv1mode}{str(conv1speed).zfill(3)}"
 
         # Set current_status["conv"] to the new mode and speed
         self.current_status["conv"]["mode"][conveyor] = mode
