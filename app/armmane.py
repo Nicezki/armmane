@@ -21,8 +21,7 @@ class ArmMane:
             "drop" : None,
             "shape" : False,
             "error": 0,
-            "pickup_count" : [
-                0,0,0],
+            "pickup_count" : 0,
             "items": [
                 2,2,2,
             ]
@@ -193,7 +192,6 @@ class ArmMane:
             self.tfma.startDetect()
             time.sleep(3)
             if self.sysm.running["current_classes"] != None:
-                logger.debug("HIII")
                 result = self.sysm.running["current_classes"].split("_")
                 logger.debug(result)
                 #Chose which box to be drop
@@ -238,7 +236,7 @@ class ArmMane:
                     logger.debug("Instruction Failed, trying to reverse the conveyor")
                     while True:
                         count = count+1
-                        self.status["error"] = self.status["error"]+1
+                        self.status["error"] +=1
                         self.stepControl(4.3)
                         time.sleep(1)
                         self.stepControl(4)
@@ -262,6 +260,9 @@ class ArmMane:
                 self.status["step"] = 1
                 return
             self.dropBox(self.status["drop"])
+        
+        elif step == 5 & self.status["pickup_count"] == 6:
+            self.shuffleObject()
 
     def grabBox(self,box_number):
         # Check if the box is empty
@@ -336,6 +337,7 @@ class ArmMane:
                 
         logger.debug(f"Drop to box number {box_number} finished")
         # Update the box status
+        self.status["pickup_count"] += 1
         self.status["items"][box_number] += 1
         logger.debug(f"Box number {box_number+1} now has {self.status['items'][box_number]} items")
         return True
@@ -345,14 +347,14 @@ class ArmMane:
         while i < 6 :
             i = i+1
             random_pickup = random.randrange(len(self.status["item"]))
-            logger.debug(f"Pickup from box {random_pickup}")
             if self.status["item"][random_pickup] == 0 :
               i= i-1
               continue
             else :
                random_dropbox = random.randrange(len(self.status["item"]))
-               logger.debug(f"drop to box {random_dropbox}")
                self.status["item"][random_dropbox] += 1
+               logger.debug(f"Pickup from box {random_pickup}")
                self.grabBox(random_pickup)
+               logger.debug(f"drop to box {random_dropbox}")
                self.dropBox(random_dropbox)
 
