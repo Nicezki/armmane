@@ -360,7 +360,7 @@ class SeriMane:
         # Put in to the function "translatePiInstruction"
         # Loop through the step
         for i in step:
-            logger.info(f"Converting instruction: {i}")
+            #logger.info(f"Converting instruction: {i}")
             self.translatePiInstruction(i)
             time.sleep(0.5)
         self.log(f"Instruction sent: {step}")
@@ -373,7 +373,7 @@ class SeriMane:
         #     S0D180 -> set servo 0 to 180 degree
             servo = int(action[1:3])
             degree = int(action[4:7])
-            logger.info(f"[Converted] Setting servo {servo} to {degree} degree")
+            #logger.info(f"[Converted] Setting servo {servo} to {degree} degree")
             self.setSmoothServo(servo, degree)
             return None
         elif(action.startswith("C")):
@@ -381,7 +381,7 @@ class SeriMane:
             conveyor = int(action[1:2])
             mode = int(action[3:4])
             speed = int(action[5:8])
-            logger.info(f"[Converted] Setting conveyor {conveyor} to mode {mode} at speed {speed}")
+            #logger.info(f"[Converted] Setting conveyor {conveyor} to mode {mode} at speed {speed}")
             self.setConveyor(conveyor, mode, speed)
             return None
         else:
@@ -415,17 +415,17 @@ class SeriMane:
         delay = float(self.sysmane.app_config.get("servo_delay"))
         # Calculate the difference between the desired degree and current degree
         degree_diff = desired_degree - current_degree
-        logger.info(f"Servo {servo} at {current_degree} degree, need to move {degree_diff} degree to {desired_degree} degree")
+        #logger.info(f"Servo {servo} at {current_degree} degree, need to move {degree_diff} degree to {desired_degree} degree")
         
         # If the difference is 0, do nothing
         if degree_diff == 0:
-            logger.info(f"Servo {servo} is already at {desired_degree} degree")
+            #logger.info(f"Servo {servo} is already at {desired_degree} degree")
             self.setServo(servo, desired_degree)
             return None
         
         # If the difference is positive, move clockwise
         if degree_diff > 0:
-            logger.info(f"Servo {servo} is moving clockwise")
+            #logger.info(f"Servo {servo} is moving clockwise")
             # Loop from current degree to desired degree
             for i in range(current_degree, desired_degree + 1, step):
                 # Set the servo to the current degree
@@ -435,7 +435,7 @@ class SeriMane:
 
         # If the difference is negative, move counter-clockwise
         if degree_diff < 0:
-            logger.info(f"Servo {servo} is moving counter-clockwise")
+            #logger.info(f"Servo {servo} is moving counter-clockwise")
             # Loop from current degree to desired degree
             for i in range(current_degree, desired_degree - 1, -step):
                 # Set the servo to the current degree

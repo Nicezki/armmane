@@ -377,7 +377,7 @@ async def command_preset(preset: str):
 #         }
 #     )
 
-@app.get("/mode/{mode}", tags=["Status"], description="Set mode of arm (manual or auto)")
+@app.post("/mode/{mode}", tags=["Status"], description="Set mode of arm (manual or auto)")
 async def mode(mode: str):
     # If mode is not manual or auto
     if mode not in ["manual", "auto"]:
