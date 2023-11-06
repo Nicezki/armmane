@@ -25,11 +25,12 @@ class SeriMane:
                 'available' : False,
                 'value' : False
             },
-            "statuscode" : "YOU ARE GAY",
+            "statuscode" : "BURAPHA GAY",
             "instruction" : None,
             "status" : "Initualizing",
             "message" : "Initualizing Arduino connection",
             "queue" : [],
+            "gripdetect" : False,
             "system": {
                 "os": platform.system(),
                 "version": platform.version(),
@@ -66,6 +67,7 @@ class SeriMane:
             self.sensor_pin = 17  # Use the GPIO number, not the physical pin number
             GPIO.setmode(GPIO.BCM)
             GPIO.setup(self.sensor_pin, GPIO.IN)
+            GPIO.setup(18, GPIO.IN)
             self.log("GPIO setup done", "GPIO", "success")
 
         self.prepare()
@@ -100,6 +102,14 @@ class SeriMane:
             self.current_status["system"]["network"] = psutil.net_io_counters()
             time.sleep(5)
 
+    def updateGripStatus(self):
+        while True:
+            self.current_status["gripdetect"] = self.getGripItemStatus()
+            logger.info(f"Grip status: {self.current_status['gripdetect']}")
+            time.sleep(0.5)
+
+
+
     def initArduinoPort(self):
         self.arduino_port = self.findArduinoPort()
         if self.arduino_port:
@@ -119,6 +129,12 @@ class SeriMane:
         self.system_thread = threading.Thread(target=self.updateSystemStatus)
         self.system_thread.daemon = True
         self.system_thread.start()
+
+        # Add thread for updating grip status
+        self.grip_thread = threading.Thread(target=self.updateGripStatus)
+        self.grip_thread.daemon = True
+        self.grip_thread.start()
+
 
         # self.compat_checkCurrentState()
         # self.compat_checkBusy()
@@ -147,7 +163,7 @@ class SeriMane:
             # self.sensor_thread.join()``
         
     def detectObstacle(self):
-        while True:
+        while True:   
             # Read the digital value from the obstacle sensor
             if self.current_status["sensor"]["init"] == None or self.current_status["sensor"]["init"] == True :
                 counterout = 0
@@ -387,6 +403,18 @@ class SeriMane:
         else:
             self.log(f"Action {action} not found in instruction list", "Error", "error")
             return None
+
+
+    def getGripItemStatus(self):
+        # Get digitalread of pin 18
+        # If HIGH, return True
+        # If LOW, return False
+        if GPIO.input(18) == GPIO.HIGH:
+            return True
+        else:
+            return False
+        
+        
 
 
 
