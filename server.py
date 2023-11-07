@@ -220,6 +220,25 @@ async def status_prediction():
             "status_prediction": sys.getCurrentResult()
         }
     )
+
+@app.get("/status/alert", tags=["Status"], description="Return current alert status of all system.")
+async def status_alert():
+    # Get alert from all class (arm, seri, tf) by calling method getAlert()
+    alert = {
+        "arm": amn.getAlert(),
+        "seri": seri.getAlert(),
+        "tf": tmn.getAlert()
+    }
+    
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Return status of alert",
+            "status_alert": alert
+        }
+    )
+
     
 @app.get("/command/servo/{servo}/{angle}", tags=["Command Deprecated"], description="Set servo to desired angle")
 @app.post("/command/servo/{servo}/{angle}", tags=["Command"], description="Set servo to desired angle")
@@ -282,8 +301,6 @@ async def command_conv(conv: int, mode: int = 0, speed: int = 255):
                 "message": "Set conv {} to mode {}".format(conv, mode)
             }
         )
-    
-
 
     # Check if conv is less than 0 or more than conveyor_count
     if conv < 0 or conv > int(sys.app_config.get("conveyor_count")):
@@ -319,6 +336,18 @@ async def command_conv(conv: int, mode: int = 0, speed: int = 255):
         }
     )
 
+@app.get("/command/sorting/{current_type}", tags=["Command Deprecated"], description="Set sorting type of the arm")
+@app.post("/command/sorting/{current_type}", tags=["Command"], description="Set sorting type of the arm")
+async def change_type(current_type: int = 0):
+      amn.setSorting(current_type)
+      return JSONResponse(
+            status_code=200,
+            content={
+                "status": "success",
+                "message": "Set sorting to {}".format(current_type)
+            }
+      )
+    
 @app.get("/command/preset/{preset}", tags=["Command Deprecated"], description="Run the preset instruction to control the arm")
 @app.post("/command/preset/{preset}", tags=["Command"], description="Run the preset instruction to control the arm")
 async def command_preset(preset: str):
@@ -339,43 +368,36 @@ async def command_preset(preset: str):
             "message": "Set preset {}".format(preset)
         }
     )
-    
-# @app.get("/command/px/{instruction}", tags=["Command Deprecated"], description="Set multi-instruction (ElonX-instruction) to control the arm")
-# @app.post("/command/px/{instruction}", tags=["Command"], description="Set multi-instruction (ElonX-instruction) to control the arm")
-# async def command_px(instruction: str):
-#     seri.sendMessageToArduino("PX" + instruction + ">END")
-#     return JSONResponse(
-#         status_code=200,
-#         content={
-#             "status": "success",
-#             "message": "Set instruction {}".format(instruction)
-#         }
-#     )
 
-# @app.get("/command/pi/{instruction}", tags=["Command Deprecated"], description="Set single-instruction (Elon-instruction) to control the arm")
-# @app.post("/command/pi/{instruction}", tags=["Command"], description="Set single-instruction (Elon-instruction) to control the arm")
-# async def command_pi(instruction: str):
-#     seri.sendMessageToArduino("PI" + instruction)
-#     return JSONResponse(
-#         status_code=200,
-#         content={
-#             "status": "success",
-#             "message": "Set instruction {}".format(instruction)
-#         }
-#     )
-    
 
-# @app.get("/command/reset", tags=["Command Deprecated"], description="Reset arm to default waiting position")
-# @app.post("/command/reset", tags=["Command"], description="Reset arm to default waiting position")
-# async def command_reset():
-#     seri.resetServo()
-#     return JSONResponse(
-#         status_code=200,
-#         content={
-#             "status": "success",
-#             "message": "Reset arm"
-#         }
-#     )
+@app.get("/command/emergency", tags=["Command Deprecated"], description="Stop the arm immediately")
+@app.post("/command/emergency", tags=["Command"], description="Stop the arm immediately")
+async def command_emergency():
+    seri.setEmergency(True)
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Set emergency"
+        }
+    )
+
+
+@app.get("/command/unlock", tags=["Command Deprecated"], description="Unlock the arm after emergency")
+@app.post("/command/unlock", tags=["Command"], description="Unlock the arm after emergency")
+async def command_unlock():
+    seri.setEmergency(False)
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Set unlock"
+        }
+    )
+
+    
+        
+
 
 @app.post("/mode/{mode}", tags=["Status"], description="Set mode of arm (manual or auto)")
 async def mode(mode: str):
@@ -403,6 +425,7 @@ async def mode(mode: str):
 async def event_generator(request: Request):
     last_seri_status = {}
     last_arm_status = {}
+    last_alert_status = {}
     yield {
         # Send connected message to client
         "data": json.dumps({"status": "connected"})
@@ -414,12 +437,31 @@ async def event_generator(request: Request):
         # Check if status changed
         current_seri_status = seri.getCurrentStatus()
         current_arm_status = amn.getCurrentStatus()
+
+        alert = {
+        "arm": amn.getAlert(),
+        "seri": seri.getAlert(),
+        "tf": tmn.getAlert()
+        }
+
+        current_alert_status = copy.deepcopy(alert)
+
+
+
         # print("current_status")
         # print(current_status['servo'])
         # print("last_status")
         # print(last_status['servo'])
         
         # Compare individual keys and values
+        if last_alert_status != current_alert_status:
+            # If client reconnects or status changes, send current_status to client
+            last_alert_status = copy.deepcopy(current_alert_status)
+            yield {
+                "event": "alert_status",
+                "data": json.dumps(current_alert_status)
+            }
+
         if last_seri_status != current_seri_status:
             # If client reconnects or status changes, send current_seri_status to client
             last_seri_status = copy.deepcopy(current_seri_status)

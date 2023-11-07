@@ -14,20 +14,40 @@ class ArmMane:
         self.tfma = TFmane
 
         self.status = {
-            "step": 6,
+            "step": 0,
             "idle" : True,
             "start" : 0,
             "mode" : 0,
             "drop" : None,
-            "shape" : False,
+            "sorting" : 0,
             "error": 0,
             "pickup_count" : [
-                0,0,0,
+                2,2,2,
             ],
             "items": [
                 2,2,2,
-            ]
+            ],
+            "alert":{
+                "shuffle_currently": False,
+                "grip_failed" : False,
+                "not_find_object" : False,
+                "not_recognize_object" : False,
+                "not_recognize_object_limit" : False,
+                "gripcheck_not_working": False,
+                "grip_failed_limit" : False,
+            }
         }
+
+
+    def getAlert(self):
+        return self.status["alert"]
+
+    def setSorting(self,sortNumber):
+        self.status["sorting"] = sortNumber
+        return True
+
+    def getSorting(self):
+        return self.status["sorting"]
 
     def getCurrentStatus(self):
         return self.status
@@ -148,6 +168,27 @@ class ArmMane:
         if step == 0 : #Reset the arm to the initial position
             self.stepControl(0)
             self.status["drop"] = None
+            # Check if the grip sensor is working by trying to grab the item
+            logger.debug("Checking grip sensor process started")
+            logger.debug("Trying to grip...")
+            self.stepControl(0.1)
+            time.sleep(1)
+            logger.debug("Checking if the grip sensor is working...")
+            if(self.seri.getGripItemStatus() == True):
+                logger.debug("Grip sensor is working")
+                self.status["alert"]["gripcheck_not_working"] = False
+            elif (self.seri.getGripItemStatus() == False):
+                logger.error("Grip sensor is not working")
+                self.status["alert"]["gripcheck_not_working"] = True
+                self.status["step"] = 0
+                return
+            else:
+                logger.error(f"Grip sensor return unknown value: {self.seri.getGripItemStatus()}")
+                self.status["alert"]["gripcheck_not_working"] = True
+                self.status["step"] = 0
+                return
+            logger.debug("Checking grip sensor process finished")
+
 
         elif step == 1: #Grab from the box
             for i, item in enumerate(self.status["pickup_count"]):
@@ -157,7 +198,17 @@ class ArmMane:
                 else:
                     logger.debug(f"Box number {i+1} now has {item} items, Proceed to grab the item")
                     self.currentBox = i
-                    self.grabBox(i)
+                    # Grab result can be 0 = empty, 1 = success, 2 = failed, 3 = not started
+                    grab_result = 3
+                    grab_retry = 0
+                    while grab_result == 3 or (grab_result == 2 and grab_retry < 5):
+                        if grab_retry > 0:
+                            logger.warning(f"Retrying grab from box number {i+1} - Attempt {grab_retry+1}")
+                        grab_result = self.grabBox(i)
+                        grab_retry += 1
+                        if grab_result == 2:
+                            logger.warning(f"Detected failed grab, retrying grab from box number {i+1}")
+                            self.status["step"] = 1
                     break
         
         elif step == 2: #Place the item on the conveyor
@@ -203,7 +254,7 @@ class ArmMane:
                     if self.sysm.running["current_classes"] != None and self.sysm.running["current_classes"] != "":
                         result = self.sysm.running["current_classes"].split("_")
                         logger.debug(result)
-                        if (self.status["shape"]) :
+                        if (self.status["sorting"] == 0) :
                             logger.debug("IN SHAPE")
                             if result[1] == "Square":
                                 self.status["drop"] = 0
@@ -211,7 +262,8 @@ class ArmMane:
                                 self.status["drop"] = 1
                             elif result[1] == "Cylinder":
                                 self.status["drop"] = 2
-                        else :
+
+                        elif (self.status["sorting"] == 1) :
                             logger.debug("IN COLOR")
                             if result[0] == "Red":
                                 self.status["drop"] = 0
@@ -219,14 +271,21 @@ class ArmMane:
                                 self.status["drop"] = 1
                             elif result[0] == "Blue":
                                 self.status["drop"] = 2
+                        else : 
+                            logger.debug("IN RANDOM")
+                            self.status["drop"] = random.randrange(3)
                         logger.debug(f"drop box : {self.status['drop']} ")
                         break
 
                     
-                    if(self.status["shape"]):
+                    if(self.status["sorting"] == 0):
                         logger.debug("Can not detect any shape")
-                    else:
+                    
+                    elif(self.status["sorting"] == 1):
                         logger.debug("Can not detect any color")
+
+                    else:
+                        logger.debug("Can not detect any object")
 
                     logger.debug("Instruction Failed, trying to reverse the conveyor")
                     while True:
@@ -240,10 +299,14 @@ class ArmMane:
     
 
 
-                if(self.status["shape"]):
+                if(self.status["sorting"] == 0):
                     logger.debug("Shape detected, Stop detection and camera for better performance :)")
-                else:
+
+                elif(self.status["sorting"] == 1):
                     logger.debug("Color detected, Stop detection and camera for better performance :)")
+
+                else:
+                    logger.debug("Object detected, Stop detection and camera for better performance :)")
                 # Stop the camera
                 self.tfma.stopDetect()
                 time.sleep(1)
@@ -252,21 +315,7 @@ class ArmMane:
                 self.stepControl(4.4)
                 self.stepControl(4.2)
                 
-                    # if(self.status["shape"]):
-                    #     logger.debug("Can not detect any shape")
-                    # else:
-                    #     logger.debug("Can not detect any color")
-
-                    # logger.debug("Instruction Failed, trying to reverse the conveyor")
-                    # while True:
-                    #     count = count+1
-                    #     self.status["error"] +=1
-                    #     self.stepControl(4.3)
-                    #     time.sleep(1)
-                    #     self.stepControl(4)
-                    #     if count > 5 :
-                    #         break
-
+                   
 
         elif step == 5: #Place the item in the box
             self.stepControl(5)
@@ -296,7 +345,7 @@ class ArmMane:
         # Check if the box is empty
         if(self.status["items"][box_number] == 0):
             logger.debug(f"Box number {box_number+1} is empty! Skippping this box")
-            return False
+            return 0
         else:
             logger.debug(f"Box number {box_number+1} now has {self.status['items'][box_number]} items, Proceed to grab the item")
             for step in self.sysm.app_config.get("grab_step","grab"+str(box_number)):
@@ -325,14 +374,35 @@ class ArmMane:
                     finish_count = 0
                 else:
                     finish_count += 1
+
+            #Check is grab sensor is working
+            if(self.status["alert"]["gripcheck_not_working"]):
+                logger.warning("Grip sensor is not working, skip the item grip check")
+            else:
+                # Chrck if the grab is success
+                if(self.seri.getGripItemStatus() == False):
+                    logger.success(f"[Grip Check] Grab from box number {box_number+1} success")
+                    self.status["alert"]["grip_failed"] = False
+                elif(self.seri.getGripItemStatus() == True):
+                    logger.error(f"[Grip Check] Grab from box number {box_number+1} failed")
+                    self.status["alert"]["grip_failed"] = True
+                    # Retry the grab process
+                    logger.warning(f"Detected failed grab, retrying grab from box number {box_number+1}")
+                    return 2
+                else:
+                    logger.error(f"[Grip Check] Grip sensor return unknown value: {self.seri.getGripItemStatus()}")
+                    logger.warning("Grip sensor is not working, skip the item grip check")
+    
                     
             logger.debug(f"Grab from box number {box_number+1} finished")
             # Update the box status
             self.status["pickup_count"][box_number] -= 1
             self.status["items"][box_number] -= 1
             logger.debug(f"Box number {box_number+1} now has {self.status['items'][box_number]} items")
-            return True
+            return 1
             
+
+
     def dropBox(self,box_number):
         for step in self.sysm.app_config.get("drop_step","drop"+str(box_number)):
             # If the instruction example are: delay0.0 or delay1 or delay0.55
@@ -370,6 +440,7 @@ class ArmMane:
         return True
 
     def shuffleObject(self):
+        self.status["alert"]["shuffle_currently"] = True
         i = 0
         while i <= 5 :
             i += 1
@@ -383,5 +454,6 @@ class ArmMane:
                self.grabBox(random_pickup)
                logger.debug(f"drop to box {random_dropbox}")
                self.dropBox(random_dropbox)
+        self.status["alert"]["shuffle_currently"] = False
         #return random_pickup, random_dropbox
-
+    

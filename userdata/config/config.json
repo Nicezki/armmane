@@ -44,11 +44,17 @@
         "step0" : [
             "reset"
         ],
+        "step0.1" : [
+            "grip"
+        ],
+        "step0.2" : [
+            "ungrip"
+        ],
         "step1" : [
             "grab_step"
         ],
         "step2" : [
-            "prePreDropBelt", "delay1", "preDropBelt", "delay1", "dropBelt", "delay1", "postDropBelt"
+            "preDropBelt", "delay1", "dropBelt", "delay1", "postDropBelt"
         ],
         "step3" : [
             "moveConvTop", "delay3", "stopConvTop"
@@ -102,7 +108,7 @@
         },
         "prePreGrip": {
             "step": [
-                "S00D080", "S01D075", "S02D020", "S03D060", "S04D008", "S05D040"
+                "S00D092", "S01D075", "S02D020", "S03D060", "S04D008", "S05D040"
             ]
         },
         "preGrip": {
@@ -137,7 +143,7 @@
         },
         "preGetA": {  
             "step": [
-                "S00D180", "S01D080", "S02D000", "S03D080", "S04D008", "S05D040"
+                "S00D180", "S01D080", "S02D020", "S03D080", "S04D008", "S05D040"
             ]
         },
         "preGetB": {
@@ -152,7 +158,7 @@
         },
         "getA": {
             "step": [
-                "S00D180",  "S02D018", "S03D040", "S04D008", "S01D070", "S05D090"
+                "S00D180",  "S02D010", "S03D045", "S04D008", "S01D075", "S05D090"
             ]
         },
         "getB": {
@@ -167,7 +173,7 @@
         },
         "postGetA": {
             "step": [
-                "S03D080"
+                "S00D180", "S01D110", "S02D010", "S03D030", "S04D008", "S05D090"
             ]
         },
         "postGetB": {
@@ -180,24 +186,19 @@
                 "S01D080", "S03D060", "S00D124", "S02D032", "S04D008", "S05D090"
             ]
         },
-        "prePreDropBelt": {
-            "step": [
-                "S05D090", "S04D008", "S03D080", "S02D030", "S01D060", "S00D000"
-            ]
-        },
         "preDropBelt": {
             "step": [
-                "S05D090", "S04D008", "S03D080", "S02D015", "S01D070", "S00D000"
+                "S00D006", "S02D020", "S03D090", "S01D090", "S01D070", "S01D060", "S01D060"
             ]
         },
         "dropBelt": {
             "step": [
-                "S05D040", "S04D008", "S03D080", "S02D012", "S01D070", "S00D000"
+                "S05D040"
             ]
         },
         "postDropBelt": {
             "step": [
-                "S05D040", "S04D008", "S03D080", "S02D020", "S01D070", "S00D000"
+                "S01D90", "S03D030", "S01D110" , "S02D020"
             ]
         },
         "grip":{

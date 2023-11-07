@@ -25,12 +25,13 @@ class SeriMane:
                 'available' : False,
                 'value' : False
             },
-            "statuscode" : "BURAPHA GAY",
+            "statuscode" : "none",
             "instruction" : None,
             "status" : "Initualizing",
             "message" : "Initualizing Arduino connection",
             "queue" : [],
             "gripdetect" : False,
+            "emergency" : False,
             "system": {
                 "os": platform.system(),
                 "version": platform.version(),
@@ -42,12 +43,23 @@ class SeriMane:
                 "memory_usage": psutil.virtual_memory().percent,
                 "disk_usage": psutil.disk_usage('/').percent,
                 "network": psutil.net_io_counters()
+            },
+            "alert":{
+                "arduino_not_found": True,
+                "windows_detected": False,
+                "sensor_not_working": True,
+                "emergency_mode_activated": False,
+                "sending_message_failed": False,
+                "high_cpu_usage": False,
+                "high_memory_usage": False,
+                "high_disk_usage": False,
             }
         }
 
         self.sensor = None
         self.arduino_port = None
         self.arduino = None
+        self.current_status["emergency"] = False
         self.extended_log = False
         while not self.arduino_port and self.arduino is None:
             self.initArduinoPort()
@@ -61,6 +73,7 @@ class SeriMane:
 
         if platform.system() != "Linux":
             self.log("Windows detected, skipping GPIO setup", "Windows", "warning")
+            self.current_status["alert"]["windows_detected"] = True
 
         else: 
             # Initialize GPIO for the obstacle sensor
@@ -71,6 +84,7 @@ class SeriMane:
             self.log("GPIO setup done", "GPIO", "success")
 
         self.prepare()
+        
         
 
 
@@ -100,6 +114,24 @@ class SeriMane:
             self.current_status["system"]["memory_usage"] = psutil.virtual_memory().percent
             self.current_status["system"]["disk_usage"] = psutil.disk_usage('/').percent
             self.current_status["system"]["network"] = psutil.net_io_counters()
+            # Check if the CPU usage is high
+            if self.current_status["system"]["cpu_usage"] > 80:
+                self.log(f"CPU usage is high ({self.current_status['system']['cpu_usage']}%)", "CPU", "warning")
+                self.current_status["alert"]["high_cpu_usage"] = True
+            else:
+                self.current_status["alert"]["high_cpu_usage"] = False
+            # Check if the memory usage is high
+            if self.current_status["system"]["memory_usage"] > 80:
+                self.log(f"Memory usage is high ({self.current_status['system']['memory_usage']}%)", "Memory", "warning")
+                self.current_status["alert"]["high_memory_usage"] = True
+            else:
+                self.current_status["alert"]["high_memory_usage"] = False
+            # Check if the disk usage is high
+            if self.current_status["system"]["disk_usage"] > 80:
+                self.log(f"Disk usage is high ({self.current_status['system']['disk_usage']}%)", "Disk", "warning")
+                self.current_status["alert"]["high_disk_usage"] = True
+            else:
+                self.current_status["alert"]["high_disk_usage"] = False
             time.sleep(5)
 
     def updateGripStatus(self):
@@ -108,7 +140,13 @@ class SeriMane:
             logger.info(f"Grip status: {self.current_status['gripdetect']}")
             time.sleep(0.5)
 
+    def getGripStatus(self):
+        return self.current_status["gripdetect"]
+    
 
+    def getAlert(self):
+        return self.current_status["alert"]
+    
 
     def initArduinoPort(self):
         self.arduino_port = self.findArduinoPort()
@@ -117,10 +155,22 @@ class SeriMane:
             self.log("Connecting to Arduino with baudrate: " + str(self.sysmane.app_config.get("serial_buadrate")), "Connecting", "debug")
             self.arduino = serial.Serial(self.arduino_port, self.sysmane.app_config.get("serial_buadrate"), timeout=1)   
             self.log("Connected to Arduino", "Connected", "success")
+            self.current_status["alert"]["arduino_not_found"] = False
         else:
             self.log("Arduino not found Trying again in 1 second", "Not found", "warning")
+            self.current_status["alert"]["arduino_not_found"] = True
             # Retry to find Arduino
             self.arduino = None
+
+    def setEmergency(self, emergency):
+        self.current_status["emergency"] = emergency
+        if emergency:
+            self.log("Emergency mode activated", "Emergency", "warning")
+            self.current_status["alert"]["emergency_mode_activated"] = True
+        else:
+            self.log("Emergency mode deactivated", "Emergency", "success")
+            self.current_status["alert"]["emergency_mode_activated"] = False
+
 
 
 
@@ -158,6 +208,7 @@ class SeriMane:
         if self.current_status["sensor"]["init"] != True:
             time.sleep(5)
             self.log("No sensor found, please find one for me pretty please >,< ")
+            self.current_status["alert"]["sensor_not_working"] = True
             self.current_status["sensor"]["init"] == True
         # else:
             # self.sensor_thread.join()``
@@ -182,6 +233,7 @@ class SeriMane:
                     self.current_status["sensor"]["init"] = True 
                     self.current_status["sensor"]["available"] = True
                     self.current_status["sensor"]["value"] = True
+                    self.current_status["alert"]["sensor_not_working"] = False
                 time.sleep(0.5)  # Adjust the sleep time as needed
             else:
                 logger.error("No sensor")
@@ -236,6 +288,24 @@ class SeriMane:
         # if not self.isArduinoReady:
         #     logger.error("Arduino not ready, cannot send message.")
         #     return None
+        if self.current_status["emergency"]:
+            self.log("Emergency mode is activated, cannot send message.", "Emergency", "error")
+            # Trying to disconnect from Arduino and reconnect again
+            self.arduino = None
+            while self.current_status["emergency"]:
+                time.sleep(1)
+                self.log("[!] Emergency mode is activated [!]", "Emergency", "error")
+                self.log("Please press the unlock button to continue", "Emergency", "error")
+                self.log("or send API POST request to \"/command/unlock\" to unlock", "Emergency", "error")
+                self.log("Waiting for unlock button to be pressed...", "Emergency", "error")
+                continue
+            # Count the retry
+            retry_count = 0
+            while not self.arduino and retry_count < 100:
+                self.initArduinoPort()
+                retry_count += 1
+                self.log("[Emergency Stop] Trying to reconnect to Arduino... (Trying " + str(retry_count) + " of 100)", "Reconnecting", "warning")
+                time.sleep(1)
         if self.arduino:
             # if self.current_status["busy"]:
             #     self.log("Arduino is busy, cannot send message.", "Busy", "error")
@@ -248,9 +318,11 @@ class SeriMane:
                     self.arduino.write((message + '\n').encode())  # Send the message to Arduino
                     if self.extended_log:
                         self.log(f"Message sent to Arduino: {message}", "Sent", "success")
+                        self.current_status["alert"]["sending_message_failed"] = False
                     return "ok", self.current_status
                 except Exception as e:
                     self.log(f"Error while sending message to Arduino: {e}", "Error", "error")
+                    self.current_status["alert"]["sending_message_failed"] = True
                     # Try to reconnect to Arduino
                     self.arduino = None
                     # Count the retry
@@ -264,9 +336,11 @@ class SeriMane:
                 
             else:
                 self.log("Arduino not found, cannot send message.", "Error", "error")
+                self.current_status["alert"]["sending_message_failed"] = True
                 return "error", self.current_status
         else:
             self.log("Arduino not found, cannot send message.", "Error", "error")
+            self.current_status["alert"]["sending_message_failed"] = True
             return "error", self.current_status
 
 

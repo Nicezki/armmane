@@ -104,10 +104,18 @@ class TFMane:
             "camera_running" : False,
             "fps" : 0,
             "box" : None,
+            "alert":{
+                "camera_not_working": False,
+                "model_not_working": False
+            }
         }
 
         self.setup()
         self.setupDetect()
+
+
+    def getAlert(self):
+        return self.current_status["alert"]
         
 
     def setupCamera(self):
