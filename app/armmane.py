@@ -218,7 +218,7 @@ class ArmMane:
             self.stepControl(3)
             
         elif step == 4: #Detect the shape
-            count = 0
+            count = 0   
             self.status["drop"] = None
             self.stepControl(4)
             # Wait for sensor to detect the item
