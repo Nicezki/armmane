@@ -61,6 +61,13 @@ class SeriMane:
         self.arduino = None
         self.current_status["emergency"] = False
         self.extended_log = False
+
+
+        #FOR DEBUG WITHOUT ARDUINO ON WINDOWS ONLY!
+        self.preview_mode_non_arduino = True
+
+
+
         while not self.arduino_port and self.arduino is None:
             self.initArduinoPort()
             time.sleep(1)
@@ -157,10 +164,16 @@ class SeriMane:
             self.log("Connected to Arduino", "Connected", "success")
             self.current_status["alert"]["arduino_not_found"] = False
         else:
-            self.log("Arduino not found Trying again in 1 second", "Not found", "warning")
+            if(self.preview_mode_non_arduino):
+                self.log("Arduino not found, But preview mode is on, so I will continue", "Not found", "warning")
+                
+                self.arduino = True
+            else:
+                self.log("Arduino not found Trying again in 1 second", "Not found", "warning")
+                # Retry to find Arduino
+                self.arduino = None
             self.current_status["alert"]["arduino_not_found"] = True
-            # Retry to find Arduino
-            self.arduino = None
+
 
     def setEmergency(self, emergency):
         self.current_status["emergency"] = emergency
@@ -288,6 +301,11 @@ class SeriMane:
         # if not self.isArduinoReady:
         #     logger.error("Arduino not ready, cannot send message.")
         #     return None
+
+        if self.preview_mode_non_arduino:
+            self.log(f"Preview mode is on, message will not be sent to Arduino: {message}", "Preview", "warning")
+            return "ok", self.current_status
+
         if self.current_status["emergency"]:
             self.log("Emergency mode is activated, cannot send message.", "Emergency", "error")
             # Trying to disconnect from Arduino and reconnect again
@@ -306,6 +324,7 @@ class SeriMane:
                 retry_count += 1
                 self.log("[Emergency Stop] Trying to reconnect to Arduino... (Trying " + str(retry_count) + " of 100)", "Reconnecting", "warning")
                 time.sleep(1)
+
         if self.arduino:
             # if self.current_status["busy"]:
             #     self.log("Arduino is busy, cannot send message.", "Busy", "error")
@@ -347,6 +366,8 @@ class SeriMane:
 
     def receiveMessages(self):
         while True:
+            if self.preview_mode_non_arduino:
+                continue
             if self.arduino:
                 line = str(self.arduino.readline().decode().strip())
                 # If the line is empty, skip it
