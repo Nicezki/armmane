@@ -139,12 +139,12 @@ class SeriMane:
                 self.current_status["alert"]["high_disk_usage"] = True
             else:
                 self.current_status["alert"]["high_disk_usage"] = False
-            time.sleep(5)
+            time.sleep(3)
 
     def updateGripStatus(self):
         while True:
             self.current_status["gripdetect"] = self.getGripItemStatus()
-            logger.info(f"Grip status: {self.current_status['gripdetect']}")
+            # logger.info(f"Grip status: {self.current_status['gripdetect']}")
             time.sleep(0.5)
 
     def getGripStatus(self):
@@ -166,13 +166,13 @@ class SeriMane:
         else:
             if(self.preview_mode_non_arduino):
                 self.log("Arduino not found, But preview mode is on, so I will continue", "Not found", "warning")
-                
+                self.current_status["alert"]["arduino_not_found"] = False
                 self.arduino = True
             else:
                 self.log("Arduino not found Trying again in 1 second", "Not found", "warning")
                 # Retry to find Arduino
                 self.arduino = None
-            self.current_status["alert"]["arduino_not_found"] = True
+                self.current_status["alert"]["arduino_not_found"] = True
 
 
     def setEmergency(self, emergency):

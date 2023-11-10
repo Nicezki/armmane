@@ -35,6 +35,8 @@ class ArmMane:
                 "not_recognize_object_limit" : False,
                 "gripcheck_not_working": False,
                 "grip_failed_limit" : False,
+                "random_box_prediction" : False,
+                "ignore_conv_sensor" : True, # Can be used to ignore the conveyor sensor (Set to True to ignore the sensor)
             }
         }
 
@@ -191,6 +193,7 @@ class ArmMane:
 
 
         elif step == 1: #Grab from the box
+            self.status["alert"]["random_box_prediction"] = False
             for i, item in enumerate(self.status["pickup_count"]):
                 if(item == 0):
                     logger.debug(f"Box number {i+1} is empty! Skippping this box")
@@ -209,6 +212,9 @@ class ArmMane:
                         if grab_result == 2:
                             logger.warning(f"Detected failed grab, retrying grab from box number {i+1}")
                             self.status["step"] = 1
+                    if(grab_result == 2):
+                        logger.error(f"Grab failed after {grab_retry} attempts, skip the box")
+                        self.status["alert"]["grip_failed_limit"] = True
                     break
         
         elif step == 2: #Place the item on the conveyor
@@ -221,25 +227,31 @@ class ArmMane:
             count = 0   
             self.status["drop"] = None
             self.stepControl(4)
-            # Wait for sensor to detect the item
-            logger.debug("Waiting for the sensor to detect the item")
-            while(not self.seri.current_status["sensor"]["value"]):
-                count = count+1
-                time.sleep(0.1)
-                logger.debug(count)
-                if count >= 120:
-                    self.status["error"] = 404
-                    logger.error("No object on conveyor")
-                    self.stepControl(4.1)
-                    self.status["step"] = 0
-                    self.status["items"][self.currentBox] += 1
-                    break
-               
+            if self.status["alert"]["ignore_conv_sensor"]:
+                logger.warning("Conveyor sensor is ignored, skip the conveyor sensor check")
+                logger.warning("Trying with fixed delay instead (10 seconds)")
+                time.sleep(10)
+            else:
+                # Wait for sensor to detect the item
+                logger.debug("Waiting for the sensor to detect the item")
+                while(not self.seri.current_status["sensor"]["value"]):
+                    count = count+1
+                    time.sleep(0.1)
+                    logger.debug(count)
+                    if count >= 120:
+                        self.status["error"] = 404
+                        logger.error("No object on conveyor")
+                        self.stepControl(4.1)
+                        self.status["step"] = 0
+                        self.status["items"][self.currentBox] += 1
+                        self.status["alert"]["not_find_object"] = True
+                        break
+
             if self.status["step"] != 0:     
                 self.status["error"] = 0
                 self.stepControl(4.1)
                 logger.debug("Item detected")
-
+                self.status["alert"]["not_find_object"] = False
                 #Open camera
                 self.tfma.startCamera()
                 time.sleep(1)
@@ -273,6 +285,7 @@ class ArmMane:
                                 self.status["drop"] = 2
                         else : 
                             logger.debug("IN RANDOM")
+                            self.status["alert"]["random_box_prediction"] = True
                             self.status["drop"] = random.randrange(3)
                         logger.debug(f"drop box : {self.status['drop']} ")
                         break
@@ -287,15 +300,25 @@ class ArmMane:
                     else:
                         logger.debug("Can not detect any object")
 
+                    self.status["alert"]["not_recognize_object"] = True
+
                     logger.debug("Instruction Failed, trying to reverse the conveyor")
+  
                     while True:
                         count = count+1
                         self.status["error"] +=1
-                        self.stepControl(4.3)
+                        logger.debug("Trying to reverse the conveyor (Attempt "+str(count)+")" )
+                        self.stepControl(4.3) #Reverse the conveyor
                         time.sleep(1)
-                        self.stepControl(4)
-                        if count > 5 or self.sysm.running["current_classes"] != None :
+                        self.stepControl(4) #Move the conveyor normally
+                        if count > 5 :
+                            self.status["alert"]["not_recognize_object_limit"] = True
+                        if self.sysm.running["current_classes"] != None:
+                            self.status["alert"]["not_recognize_object"] = False
+
+                        if count >5 or self.sysm.running["current_classes"] != None:
                             break
+
     
 
 
@@ -307,21 +330,23 @@ class ArmMane:
 
                 else:
                     logger.debug("Object detected, Stop detection and camera for better performance :)")
+
+                self.status["alert"]["not_recognize_object"] = False
                 # Stop the camera
                 self.tfma.stopDetect()
                 time.sleep(1)
                 self.tfma.stopCamera()
                 logger.debug("Proceed to next step")
-                self.stepControl(4.4)
-                self.stepControl(4.2)
-                
-                   
+                self.stepControl(4.4) #Move the conveyor > Close gate > Stop the conveyor > Open gate
+                self.stepControl(4.2) # Prepre grip
+
 
         elif step == 5: #Place the item in the box
             self.stepControl(5)
             # If shape is detected, place the item in the box according to the shape
             logger.debug("Prepare to drop the item in the box")
             if(self.status["drop"] == None):
+                self.status["alert"]["random_box_prediction"] = True
                 logger.error("Drop box is not set, This indicate that the shape is not detected")
                 logger.warning("Instruction Failed, Trying to fill the random box that not have 2 items")
                 # If the shape is not detected, try to fill the box that not have 2 items
@@ -331,12 +356,15 @@ class ArmMane:
                         logger.warning(f"Trying to fill the box number {i+1} because it has {item} items")
                         break
                 self.status["step"] = 1
+                self.status["alert"]["random_box_prediction"] = False
                 return
             self.dropBox(self.status["drop"])
         
         elif step == 6 and self.status["pickup_count"] == [0,0,0]:
             logger.debug("All object are in the correct box, shuffling the object")
+            self.status["alert"]["shuffle_currently"] = True
             self.shuffleObject()
+            self.status["alert"]["shuffle_currently"] = False
             logger.debug("Finished shuffling the object")
             self.status["pickup_count"] = self.status["items"]
             logger.debug(self.status["pickup_count"])

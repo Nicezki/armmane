@@ -137,19 +137,23 @@ class TFMane:
                 # Try to get a frame to check if the camera is ready
                 frame = self.video.read()
                 logger.info("Camera is ready")
+                self.current_status['alert']['camera_not_working'] = False
                 self.current_status['detect_running'] == True
                 self.stopCamera()
             except Exception as e:
                 logger.info("Error when open camera: {}".format(e))
+                self.current_status['alert']['camera_not_working'] = True
                 return False
             return True
         else:
             logger.info("No camera avaliable right now, Please plug in the usb camera or picam ")
+            self.current_status['alert']['camera_not_working'] = True
             return False
         
     def setupModel(self):
         if self.model is None:
             logger.info("No model avaliable right now, Please choose the model first")
+            self.current_status['alert']['model_not_working'] = True
             return False
         if self.interpreter is not None:
             self.interpreter.close()
@@ -222,10 +226,12 @@ class TFMane:
                 frame = self.video.read()
                 logger.info("Camera is ready")
                 self.current_status['camera_running'] = True
+                self.current_status['alert']['camera_not_working'] = False
                 break
             except Exception as e:
                 logger.info("Error when open camera: {}".format(e))
                 logger.info("Retry to open camera in 1 second...")
+                self.current_status['alert']['camera_not_working'] = True
                 time.sleep(1)
         return True
     
@@ -237,10 +243,13 @@ class TFMane:
         camera_status = self.setupCamera()
         if not camera_status:
             logger.info("[TFMaid] Camera is not ready, please check the camera")
+            self.current_status['alert']['camera_not_working'] = True
             return False
         else:
             self.setupModel()
+            self.current_status['alert']['camera_not_working'] = False
             logger.info("[TFMaid] setting up completed")
+            
 
     def closeDetect(self):
         return self.close
