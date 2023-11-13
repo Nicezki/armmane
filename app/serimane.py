@@ -3,7 +3,9 @@ import serial.tools.list_ports
 import threading
 from loguru import logger
 import platform
-import RPi.GPIO as GPIO
+if platform.system() == "Linux":
+    import RPi.GPIO as GPIO
+    
 import time
 import psutil
 
@@ -85,7 +87,7 @@ class SeriMane:
         self.receive_thread.daemon = True 
         self.receive_thread.start()
 
-        if platform.system() != "Linux":
+        if platform.system() == "Windows":
             self.log("Windows detected, skipping GPIO setup", "Windows", "warning")
             self.current_status["alert"]["windows_detected"] = True
 
@@ -106,7 +108,6 @@ class SeriMane:
     def __del__(self):
         self.closeConnection()
         if platform.system() != "Linux":
-            GPIO.cleanup()
             if self.obstacle_thread:
                 self.obstacle_thread.join()
             if self.sensor_thread:
@@ -511,10 +512,13 @@ class SeriMane:
         # Get digitalread of pin 18
         # If HIGH, return True
         # If LOW, return False
-        if GPIO.input(18) == GPIO.HIGH:
-            return True
-        else:
+        if platform.system() != "Linux":
             return False
+        else:
+            if GPIO.input(18) == GPIO.HIGH:
+                return True
+            else:
+                return False
         
         
 
