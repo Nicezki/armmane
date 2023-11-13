@@ -36,9 +36,14 @@ class ArmMane:
                 "gripcheck_not_working": False,
                 "grip_failed_limit" : False,
                 "random_box_prediction" : False,
-                "ignore_conv_sensor" : True, # Can be used to ignore the conveyor sensor (Set to True to ignore the sensor)
+                "ignore_conv_sensor" : False, # Can be used to ignore the conveyor sensor (Set to True to ignore the sensor)
             }
         }
+
+        # If OS is windows, set flag to ignore_conv_sensor to True
+        if(os.name == "nt"):
+            self.status["alert"]["ignore_conv_sensor"] = True
+            logger.warning("OS is windows, set flag to ignore_conv_sensor to True")
 
 
     def getAlert(self):
@@ -313,7 +318,7 @@ class ArmMane:
                         self.stepControl(4) #Move the conveyor normally
                         if count > 5 :
                             self.status["alert"]["not_recognize_object_limit"] = True
-                            
+
                         if self.sysm.running["current_classes"] != None:
                             self.status["alert"]["not_recognize_object"] = False
                             self.status["alert"]["not_recognize_object_limit"] = False

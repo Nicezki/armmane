@@ -64,7 +64,14 @@ class SeriMane:
 
 
         #FOR DEBUG WITHOUT ARDUINO ON WINDOWS ONLY!
-        self.preview_mode_non_arduino = True
+        self.preview_mode_non_arduino = False
+
+
+        #If Windows detected, set preview mode to True
+        if platform.system() == "Windows":
+            self.preview_mode_non_arduino = True
+            self.log("Windows detected, preview mode with no arduino is on", "Windows", "warning")
+        
 
 
 
