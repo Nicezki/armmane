@@ -27,6 +27,7 @@ import time
 
 
 
+
 port = 8000
 
 STREAM_DELAY = 1  # second
@@ -419,6 +420,132 @@ async def mode(mode: str):
             "message": "Set mode to {}".format(mode)
         }
     )
+
+@app.post("/camera/start", tags=["Status"], description="Start camera")
+async def camera_start():
+    # Start camera
+    result = tmn.startCamera()
+    # If false, camera is not available
+    if not result:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "status": "error",
+                "message": "Camera not available"
+            }
+        )
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Start camera {}".format(tmn.current_status['current_camera'])
+        }
+    )
+    
+
+@app.post("/camera/stop", tags=["Status"], description="Stop camera")
+async def camera_stop():
+    # Stop camera
+    tmn.stopCamera()
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Stop camera {}".format(tmn.current_status['current_camera'])
+        }
+    )
+
+
+
+
+@app.post("/camera/{id}", tags=["Status"], description="Set camera ID to use")
+async def camera(id: int):
+    # If camera is not in list of cameras in tfm.camera_list
+    if id not in tmn.camera_list:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "status": "error",
+                "message": "Camera not found"
+            }
+        )
+    # Set camera
+    result = tmn.switchCamera(id)
+    #If false, camera is not available
+    if not result:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "status": "error",
+                "message": "Camera not available"
+            }
+        )
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Set camera to {}".format(id)
+        }
+    )
+
+@app.get ("/camera", tags=["Status"], description="Return current availablecamera ID and name") 
+async def camera():
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Return current available camera",
+            "camera": tmn.getCamerList()
+        }
+    )
+
+
+
+@app.post("/flag/not_stop_camera/{status}", tags=["Status"], description="Set not_stop_camera flag to true or false")
+async def flag_not_stop_camera(status: bool):
+    # Set not_stop_camera flag
+    amn.status["flag"]["not_stop_camera"] = status
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Set not_stop_camera to {}".format(status)
+        }
+    )
+
+@app.post("/detect/start", tags=["Status"], description="Start object detection")
+async def detect_start():
+    # Check if camera is available
+    if not tmn.video:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "status": "error",
+                "message": "Camera not available"
+            }
+        )
+    # Start object detection
+    tmn.startDetect()
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Start object detection"
+        }
+    )
+
+@app.post("/detect/stop", tags=["Status"], description="Stop object detection")
+async def detect_stop():
+    # Stop object detection
+    tmn.stopDetect()
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Stop object detection"
+        }
+    )
+
 
 @app.post("/item/{box}/{item}", tags=["Status"], description="Set item of box")
 async def item(box: int, item: int):
