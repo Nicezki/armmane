@@ -313,8 +313,10 @@ class ArmMane:
                         self.stepControl(4) #Move the conveyor normally
                         if count > 5 :
                             self.status["alert"]["not_recognize_object_limit"] = True
+                            
                         if self.sysm.running["current_classes"] != None:
                             self.status["alert"]["not_recognize_object"] = False
+                            self.status["alert"]["not_recognize_object_limit"] = False
 
                         if count >5 or self.sysm.running["current_classes"] != None:
                             break
