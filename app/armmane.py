@@ -74,6 +74,10 @@ class ArmMane:
             return False
         return True
     
+    def setItem(self,box_number,item_number):
+        self.status["items"][box_number-1] = item_number
+        return True
+    
 
 
     def startAuto(self):

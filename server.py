@@ -420,6 +420,35 @@ async def mode(mode: str):
         }
     )
 
+@app.post("/item/{box}/{item}", tags=["Status"], description="Set item of box")
+async def item(box: int, item: int):
+    # armmane.py -> setItem
+    # Check if box is less than 0 or more than box_count
+    if box < 1 or box > int(sys.app_config.get("box_count")):
+        return JSONResponse(
+            status_code=404,
+            content={
+                "status": "error",
+                "message": "Box " + str(box) + " not found (Range 1 - " + str(sys.app_config.get("box_count")) + ")"
+            }
+        )
+    if item < 0 or item > int(sys.app_config.get("item_max_count")):
+        return JSONResponse(
+            status_code=404,
+            content={
+                "status": "error",
+                "message": "Item " + str(item) + " not found (Range 0 - " + str(sys.app_config.get("item_max_count")) + ")"
+            }
+        )
+    amn.setItem(box, item)
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Set item of box {} to {}".format(box, item)
+        }
+    )
+
 
 
 async def event_generator(request: Request):
