@@ -13,7 +13,9 @@ import queue
 # import importlib.util
 from loguru import logger
 from vidgear.gears import CamGear
-from pygrabber.dshow_graph import FilterGraph
+if platform.system() != 'Linux':
+    from pygrabber.dshow_graph import FilterGraph
+
 
 system_info = platform.system()
 if system_info == 'Linux':
@@ -306,20 +308,37 @@ class TFMane:
 
     # Return the camera ID and name
     def checkAvaiableCamera(self):
-        devices = FilterGraph().get_input_devices()
-        logger.info("Checking camera devices: {}".format(devices))
-        available_cameras_name = []
-        available_cameras_id = []
+        if self.system_info == 'Windows':
+            logger.info("Detected Windows system | Now using pygrabber to check camera")
+            devices = FilterGraph().get_input_devices()
+            logger.info("Checking camera devices: {}".format(devices))
+            available_cameras_name = []
+            available_cameras_id = []
 
-        for device_index, device_name in enumerate(devices):
-            # available_cameras[device_index] = device_name
-            available_cameras_name.append(device_name)
-            available_cameras_id.append(device_index)
-            logger.info("Camera index {} ({}) is available".format(device_index, device_name))
-        return available_cameras_id, available_cameras_name
-
-            
-
+            for device_index, device_name in enumerate(devices):
+                # available_cameras[device_index] = device_name
+                available_cameras_name.append(device_name)
+                available_cameras_id.append(device_index)
+                logger.info("Camera index {} ({}) is available".format(device_index, device_name))
+            return available_cameras_id, available_cameras_name
+        else:
+                logger.info("Detected non-Windows system | Now using vidgear to check camera")
+                index = 0
+                available_cameras_id = []
+                available_cameras_name = []
+                checkLimit = 10
+                while index < checkLimit:
+                    logger.info("Checking camera index: {}".format(index))
+                    cap = cv2.VideoCapture(index)
+                    if cap.read()[0]:
+                        available_cameras_id.append(index)
+                        available_cameras_name.append("Camera {}".format(index))
+                        cap.release()
+                        logger.success("Camera index {} is available".format(index))
+                    else:
+                        logger.warning("Camera index {} is not available".format(index))
+                    index += 1
+                return available_cameras_id, available_cameras_name
 
     def  detect(self):
         # if self.video is None:
