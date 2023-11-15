@@ -37,6 +37,9 @@ class ArmMane:
                 "grip_failed_limit" : False,
                 "random_box_prediction" : False,
                 "ignore_conv_sensor" : False, # Can be used to ignore the conveyor sensor (Set to True to ignore the sensor)
+            },
+            "flag":{
+                "not_stop_camera" : False,
             }
         }
 

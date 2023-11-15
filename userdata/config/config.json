@@ -11,6 +11,7 @@
     "conveyor_count" : "1",
     "box_count" : "3",
     "item_max_count" : "9",
+    "control_token" : "CPEA-RMUTT"
     "no_camera_image" : "app/assets/images/no_cam.jpg",
     "pause_camera_image" : "app/assets/images/wait_cam.jpg",
     "allowed_posture": [
