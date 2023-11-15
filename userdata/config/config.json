@@ -11,7 +11,6 @@
     "conveyor_count" : "1",
     "box_count" : "3",
     "item_max_count" : "9",
-    "control_token" : "CPEA-RMUTT"
     "no_camera_image" : "app/assets/images/no_cam.jpg",
     "pause_camera_image" : "app/assets/images/wait_cam.jpg",
     "allowed_posture": [
@@ -69,16 +68,16 @@
             "stopConvBottom"
         ],
         "step4.2" : [
-            "prePreGrip", "delay1"
+            "moveToConv"
         ],
         "step4.3" : [
-            "reverseConvBottom", "delay1", "stopConvBottom"
+            "reverseConvBottom", "delay2", "stopConvBottom"
         ],
         "step4.4" : [
             "moveConvBottom", "gateClose", "delay3", "stopConvBottom", "gateOpen"
         ],
         "step5" : [
-            "moveToConv", "preSweep", "sweep", "gripFromConv", "postGripFromConv"
+           "preSweep", "sweep", "gateClose", "moveConvBottom", "delay1", "stopConvBottom","gateOpen", "gripFromConv", "postGripFromConv"
         ]
     },
     "drop_step":{
@@ -126,7 +125,7 @@
         },
         "postDrop": {
             "step": [
-                "S01D110", "S02D010", "S03D020", "S04D000", "S05D040"
+                "S01D90", "S01D110", "S02D010", "S03D010", "S04D000", "S05D040"
             ]
         },
         "preGetA": {  
@@ -161,17 +160,17 @@
         },
         "postGetA": {
             "step": [
-                "S00D180", "S01D090", "S02D010", "S03D020", "S01D110","S04D000", "S05D090"
+                "S00D180", "S01D090", "S02D010", "S03D010", "S01D110","S04D000", "S05D090"
             ]
         },
         "postGetB": {
             "step": [
-                "S00D144", "S01D090", "S02D010", "S03D020", "S01D110","S04D000", "S05D090"
+                "S00D144", "S01D090", "S02D010", "S03D010", "S01D110","S04D000", "S05D090"
             ]
         },
         "postGetC": {
             "step": [
-                "S00D124", "S01D090", "S02D010", "S03D020", "S01D110","S04D000", "S05D090"
+                "S00D124", "S01D090", "S02D010", "S03D010", "S01D110","S04D000", "S05D090"
             ]
         },
         "preDropBelt": {
@@ -186,7 +185,7 @@
         },
         "postDropBelt": {
             "step": [
-                "S01D90", "S03D020", "S01D110" , "S02D020"
+                "S01D90", "S03D010", "S01D110" , "S02D010"
             ]
         },
         "moveToConv": {
@@ -196,12 +195,12 @@
         },
         "preSweep": {
             "step": [
-                "S00D082", "S05D090", "S04D000", "S03D050", "S02D030", "S01D065"
+                "S00D082", "S05D078", "S04D000", "S03D050", "S02D050", "S01D055"
             ]
         },
         "sweep": {
             "step": [
-                "S00D082", "S05D090", "S04D000", "S03D040", "S02D040", "S03D020", "S01D065"
+                "S00D082", "S05D078", "S04D000", "S03D020", "S02D055", "S03D008", "S03D030"
             ]
         },
         "gripFromConv": {
@@ -211,7 +210,7 @@
         },
         "postGripFromConv": {
             "step": [
-                "S00D82", "S01D110", "S02D010", "S03D020", "S04D000", "S05D090"
+                "S00D82", "S01D110", "S02D010", "S03D010", "S04D000", "S05D090"
             ]
         },
         "grip":{
