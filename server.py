@@ -582,6 +582,7 @@ async def event_generator(request: Request):
     last_seri_status = {}
     last_arm_status = {}
     last_alert_status = {}
+    last_pred_status = {}
     yield {
         # Send connected message to client
         "data": json.dumps({"status": "connected"})
@@ -593,6 +594,7 @@ async def event_generator(request: Request):
         # Check if status changed
         current_seri_status = seri.getCurrentStatus()
         current_arm_status = amn.getCurrentStatus()
+        current_pred_status = sys.getCurrentResult()
 
         alert = {
         "arm": amn.getAlert(),
@@ -601,6 +603,7 @@ async def event_generator(request: Request):
         }
 
         current_alert_status = copy.deepcopy(alert)
+
 
 
 
@@ -633,6 +636,14 @@ async def event_generator(request: Request):
                 "data": json.dumps(current_arm_status)
             }
 
+        if last_pred_status != current_pred_status:
+            # If client reconnects or status changes, send current_pred_status to client
+            last_pred_status = copy.deepcopy(current_pred_status)
+            yield {
+                "event": "prediction",
+                "data": json.dumps(current_pred_status)
+            }
+
         await asyncio.sleep(0.1)
 
 
@@ -642,37 +653,6 @@ async def sse_status_stream(request: Request):
 
 # Run the server by typing this command in the terminal:
 # python -m uvicorn server:app --reload
-
-
-async def video_generator(request: Request):
-    last_status = {}
-    yield {
-        # Send connected message to client
-        "data": json.dumps({"status": "connected"})
-    }
-    while True:
-        # If client closes connection, stop sending events
-        if await request.is_disconnected():
-            break
-        # Check if status changed
-        current_status = sys.getCurrentResult()
-        
-        # Compare individual keys and values
-        if last_status != current_status:
-            # If client reconnects or status changes, send current_status to client
-            last_status = copy.deepcopy(current_status)
-            yield {
-                "event": "prediction",
-                "data": json.dumps(current_status)
-            }
-
-        await asyncio.sleep(0.5)
-
-
-@app.get('/sse/videostream', tags=["Server Sent Event"], description="Server Sent Event to send video stream to client")
-async def sse_video_stream(request: Request):
-    return EventSourceResponse(video_generator(request))
-
 
 
 @app.get("/stream/video", tags=["StreamingResponse"], description="Better way to get the video stream from ARMMANE camera")
