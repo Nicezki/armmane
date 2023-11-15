@@ -1,4 +1,3 @@
-
 # Import packages
 #pip install -U vidgear
 # import os
@@ -96,6 +95,7 @@ class TFMane:
 
         self.video = None
         self.camera_list =[]
+        self.camera_name = []
 
         self.current_status = {
             "current_result": None,
@@ -104,6 +104,7 @@ class TFMane:
             "detect_flag" : False,
             "detect_running" : False,
             "camera_running" : False,
+            "current_camera" : 0,
             "fps" : 0,
             "box" : None,
             "alert":{
@@ -125,17 +126,19 @@ class TFMane:
         if debugrun:
             # If platform is not linux, then use the default camera
             if system_info != 'Linux':
-                self.camera_list = [1] 
+                self.camera_list = [1]
+                self.camera_name = ["Default Camera"] 
             else:
                 self.camera_list = [0]
+                self.camera_name = ["Default Camera"]
         else:
-            self.camera_list=self.checkAvaiableCamera()
+            self.camera_list, self.camera_name = self.checkAvaiableCamera()
             
-        logger.info("Camara index: {}".format(self.camera_list))
+        logger.info("Camara index: {} ({})".format(self.camera_list, self.camera_name))
 
         if len(self.camera_list) > 0:
             try:
-                self.video = VideoStream(resolution=(self.imageWidth,self.imageHeight),framerate=self.framerate,device=self.camera_list[0]).start()
+                self.video = VideoStream(resolution=(self.imageWidth,self.imageHeight),framerate=self.framerate,device=self.current_status['current_camera']).start()
                 # Try to get a frame to check if the camera is ready
                 frame = self.video.read()
                 logger.info("Camera is ready")
@@ -220,10 +223,36 @@ class TFMane:
         self.video.stop()
         self.video = None
 
+    def getCamerList(self):
+        return dict(zip(self.camera_list, self.camera_name))
+
+    def switchCamera(self, camera_index):
+        if self.video is not None:
+            self.video.stop()
+            logger.info("[TFMaid] Detect that video is running,  So now It's been closed")
+            self.video = None
+        try:
+            self.video = VideoStream(resolution=(self.imageWidth,self.imageHeight),framerate=self.framerate,device=camera_index).start()
+        except Exception as e:
+            logger.info("Error when open camera: {}".format(e))
+            self.current_status['alert']['camera_not_working'] = True
+            return False
+        
+        self.current_status['current_camera'] = camera_index
+        self.current_status['camera_running'] = True
+        self.current_status['alert']['camera_not_working'] = False
+        return True
+
     def startCamera(self):
+        # Check if the camera is ready first
+        if self.video is not None:
+            #Check if the camera is running
+            if self.current_status['camera_running'] == True:
+                logger.info("Camera is already running")
+                return True
         while True:
             try:
-                self.video = VideoStream(resolution=(self.imageWidth,self.imageHeight),framerate=self.framerate,device=self.camera_list[0]).start()
+                self.video = VideoStream(resolution=(self.imageWidth,self.imageHeight),framerate=self.framerate,device=self.current_status['current_camera']).start()
                 # Try to get a frame to check if the camera is ready
                 frame = self.video.read()
                 logger.info("Camera is ready")
@@ -257,6 +286,25 @@ class TFMane:
         return self.close
     
     
+    # def checkAvaiableCamera(self):
+    #     # checks the first 10 indexes.
+    #     #If linux, then only scan 1 index
+    #     index = 0
+    #     arr = []
+    #     checkLimit = 10
+    #     while index < checkLimit:
+    #         logger.info("Checking camera index: {}".format(index))
+    #         cap = cv2.VideoCapture(index)
+    #         if cap.read()[0]:
+    #             arr.append(index)
+    #             cap.release()
+    #             logger.success("Camera index {} is available".format(index))
+    #         else:
+    #             logger.warning("Camera index {} is not available".format(index))
+    #         index += 1
+    #     return arr
+
+    # Return the camera ID and name
     def checkAvaiableCamera(self):
         if self.system_info == 'Windows':
             logger.info("Detected Windows system | Now using pygrabber to check camera")
@@ -312,82 +360,96 @@ class TFMane:
             # Start timer (for calculating frame rate)
             t1 = cv2.getTickCount()
 
-            # Grab frame from video stream
-            frame1 = self.video.read()
+            try:
+                # Grab frame from video stream
+                frame1 = self.video.read()
 
-            # Acquire frame and resize to expected shape [1xHxWx3]
-            frame = frame1.copy()
-            # Encode the frame as JPEG
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame_resized = cv2.resize(frame_rgb, (self.width, self.height))
-            input_data = np.expand_dims(frame_resized, axis=0)
+                # Acquire frame and resize to expected shape [1xHxWx3]
+                frame = frame1.copy()
+                # Encode the frame as JPEG
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                frame_resized = cv2.resize(frame_rgb, (self.width, self.height))
+                input_data = np.expand_dims(frame_resized, axis=0)
 
-            # Normalize pixel values if using a floating model (i.e. if model is non-quantized)
-            if self.floating_model:
-                input_data = (np.float32(input_data) - self.model_config.get("config","input_mean")) /  self.model_config.get("config","input_std")
+                # Normalize pixel values if using a floating model (i.e. if model is non-quantized)
+                if self.floating_model:
+                    input_data = (np.float32(input_data) - self.model_config.get("config","input_mean")) /  self.model_config.get("config","input_std")
 
-            # Perform the actual detection by running the model with the image as input
-            self.interpreter.set_tensor(self.input_details[0]['index'],input_data)
-            self.interpreter.invoke()
-            
-            # Retrieve detection results
-            boxes = self.interpreter.get_tensor(self.output_details[self.boxes_idx]['index'])[0] # Bounding box coordinates of detected objects
-            classes = self.interpreter.get_tensor(self.output_details[self.classes_idx]['index'])[0] # Class index of detected objects
-            scores = self.interpreter.get_tensor(self.output_details[self.scores_idx]['index'])[0] # Confidence of detected objects
-            
-            # Remove the old box
-            if 'box' in self.current_status and self.current_status['box'] is not None:
-                self.current_status['box'] = None
+                # Perform the actual detection by running the model with the image as input
+                self.interpreter.set_tensor(self.input_details[0]['index'],input_data)
+                self.interpreter.invoke()
+                
+                # Retrieve detection results
+                boxes = self.interpreter.get_tensor(self.output_details[self.boxes_idx]['index'])[0] # Bounding box coordinates of detected objects
+                classes = self.interpreter.get_tensor(self.output_details[self.classes_idx]['index'])[0] # Class index of detected objects
+                scores = self.interpreter.get_tensor(self.output_details[self.scores_idx]['index'])[0] # Confidence of detected objects
+                
+                # Remove the old box
+                if 'box' in self.current_status and self.current_status['box'] is not None:
+                    self.current_status['box'] = None
 
-            # Loop over all detections and draw detection box if confidence is above minimum threshold
-            for i in range(len(scores)):
-                if ((scores[i] > self.model_config.get("config","min_conf_threshold")) and (scores[i] <= 1.0)):
-                    # Get bounding box coordinates and draw box
-                    # Interpreter can return coordinates that are outside of image dimensions, need to force them to be within image using max() and min()
+                # Loop over all detections and draw detection box if confidence is above minimum threshold
+                for i in range(len(scores)):
+                    if ((scores[i] > self.model_config.get("config","min_conf_threshold")) and (scores[i] <= 1.0)):
+                        # Get bounding box coordinates and draw box
+                        # Interpreter can return coordinates that are outside of image dimensions, need to force them to be within image using max() and min()
+                        self.current_status['detect_flag'] = True
+                        ymin = int(max(1,(boxes[i][0] * self.imageHeight)))
+                        xmin = int(max(1,(boxes[i][1] * self.imageWidth)))
+                        ymax = int(min(self.imageHeight,(boxes[i][2] * self.imageHeight)))
+                        xmax = int(min(self.imageWidth,(boxes[i][3] * self.imageWidth)))
+
+
+                        # # #DEPRECATED : After build 202309290001 - we will use the new way to send the result
+                        # # Draw the new box
+                        # cv2.rectangle(frame, (xmin,ymin), (xmax,ymax), (10, 255, 0), 2)
+
+                        # Draw label
+                        object_name = self.labels[int(classes[i])] # Look up object name from "labels" array using class index
+                        self.current_status['current_classes'] = object_name
+                        persent_scores  = int(scores[i]*100)# 0.72 to 72%'
+                        self.current_status['confident_score'] = persent_scores
+                        label = '%s: %d%%' % (object_name, persent_scores) # Example: 'person: 72%'
+                        labelSize, baseLine = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2) # Get font size
+                        label_ymin = max(ymin, labelSize[1] + 10) # Make sure not to draw label too close to top of window
+                        
+                        self.current_status['box'] = {
+                            # box-xxx
+                            "box-{}".format(i): {
+                                    "xmin": xmin,
+                                    "ymin": ymin,
+                                    "xmax": xmax,
+                                    "ymax": ymax,
+                                    "label": label,
+                                    "labelSize": labelSize,
+                                    "baseLine": baseLine,
+                                    "label_ymin": label_ymin,
+                                    "object_name": object_name,
+                                    "persent_scores": persent_scores
+                                }
+                        }
+                        # #DEPRECATED : After build 202309290001 - we will use the new way to send the result
+                        # cv2.rectangle(frame, (xmin, label_ymin-labelSize[1]-10), (xmin+labelSize[0], label_ymin+baseLine-10), (255, 255, 255), cv2.FILLED) # Draw white box to put label text in
+                        # cv2.putText(frame, label, (xmin, label_ymin-7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2) # Draw label text
+                
+                #Determine if the box is empty
+                if 'box' in self.current_status and self.current_status['box'] is None:
+                    self.current_status['detect_flag'] = False
+                else:
                     self.current_status['detect_flag'] = True
-                    ymin = int(max(1,(boxes[i][0] * self.imageHeight)))
-                    xmin = int(max(1,(boxes[i][1] * self.imageWidth)))
-                    ymax = int(min(self.imageHeight,(boxes[i][2] * self.imageHeight)))
-                    xmax = int(min(self.imageWidth,(boxes[i][3] * self.imageWidth)))
-
-
-                    # # #DEPRECATED : After build 202309290001 - we will use the new way to send the result
-                    # # Draw the new box
-                    # cv2.rectangle(frame, (xmin,ymin), (xmax,ymax), (10, 255, 0), 2)
-
-                    # Draw label
-                    object_name = self.labels[int(classes[i])] # Look up object name from "labels" array using class index
-                    self.current_status['current_classes'] = object_name
-                    persent_scores  = int(scores[i]*100)# 0.72 to 72%'
-                    self.current_status['confident_score'] = persent_scores
-                    label = '%s: %d%%' % (object_name, persent_scores) # Example: 'person: 72%'
-                    labelSize, baseLine = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2) # Get font size
-                    label_ymin = max(ymin, labelSize[1] + 10) # Make sure not to draw label too close to top of window
-                    
-                    self.current_status['box'] = {
-                        # box-xxx
-                        "box-{}".format(i): {
-                                "xmin": xmin,
-                                "ymin": ymin,
-                                "xmax": xmax,
-                                "ymax": ymax,
-                                "label": label,
-                                "labelSize": labelSize,
-                                "baseLine": baseLine,
-                                "label_ymin": label_ymin,
-                                "object_name": object_name,
-                                "persent_scores": persent_scores
-                            }
-                    }
-                    # #DEPRECATED : After build 202309290001 - we will use the new way to send the result
-                    # cv2.rectangle(frame, (xmin, label_ymin-labelSize[1]-10), (xmin+labelSize[0], label_ymin+baseLine-10), (255, 255, 255), cv2.FILLED) # Draw white box to put label text in
-                    # cv2.putText(frame, label, (xmin, label_ymin-7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2) # Draw label text
             
-            #Determine if the box is empty
-            if 'box' in self.current_status and self.current_status['box'] is None:
+            except Exception as e:
+                logger.info("Error when detect: {}".format(e))
+                logger.info("Maybe camera is offline or disconnected, or you switch the camera")
+                self.current_status['alert']['model_not_working'] = True
                 self.current_status['detect_flag'] = False
-            else:
-                self.current_status['detect_flag'] = True
+                self.current_status['current_classes'] = ""
+                self.current_status['confident_score'] = 0
+                self.current_status['fps'] = 0
+                self.current_status['current_result'] = None
+                self.sysmane.setCurrentResult(self.current_status)
+                time.sleep(1)
+                continue
 
             # Calculate framerate
             t2 = cv2.getTickCount()
