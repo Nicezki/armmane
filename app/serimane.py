@@ -484,8 +484,41 @@ class SeriMane:
             time.sleep(0.5)
         self.log(f"Instruction sent: {step}")
 
+    def servoTest(self, action):
+        servotest = self.sysmane.app_config.get("servo_test")
 
+        #Check if the action is in the servotest list if not return error
+        servo = "servo"+str(action)
+        if servo not in servotest:
+            self.log(f"Action {servo} not found in servotest list", "Error", "error")
+            return None
+        
+        step = servotest[servo]
+        # Put in to the function "translatePiInstruction"
+        # Loop through the step
+        for i in step:
+            #logger.info(f"Converting instruction: {i}")
+            self.translatePiInstruction(i)
+            time.sleep(0.5)
+        self.log(f"Servotest instruction sent: {step}")
 
+    def convTest(self, action):
+        convtest = self.sysmane.app_config.get("conv_test")
+
+        #Check if the action is in the servotest list if not return error
+        conveyor = "conv"+str(action)
+        if conveyor not in convtest:
+            self.log(f"Action {conveyor} not found in convtest list", "Error", "error")
+            return None
+        
+        step = convtest[conveyor]
+        # Put in to the function "translatePiInstruction"
+        # Loop through the step
+        for i in step:
+            #logger.info(f"Converting instruction: {i}")
+            self.translatePiInstruction(i)
+            time.sleep(0.5)
+        self.log(f"Convtest instruction sent: {step}")
 
     def translatePiInstruction(self, action):
         if(action.startswith("S")):

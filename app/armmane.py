@@ -27,6 +27,12 @@ class ArmMane:
             "items": [
                 2,2,2,
             ],
+            "shape": [
+                "Squrare","Triangle","Cylinder",
+            ],
+             "color": [
+                "Red","White","Blue",
+            ],
             "alert":{
                 "shuffle_currently": False,
                 "grip_failed" : False,
@@ -183,26 +189,7 @@ class ArmMane:
             self.stepControl(0)
             self.status["drop"] = None
             # Check if the grip sensor is working by trying to grab the item
-            logger.debug("Checking grip sensor process started")
-            logger.debug("Trying to grip...")
-            self.stepControl(0.1)
-            time.sleep(1)
-            logger.debug("Checking if the grip sensor is working...")
-            if(self.seri.getGripItemStatus() == True):
-                logger.debug("Grip sensor is working")
-                self.status["alert"]["gripcheck_not_working"] = False
-            elif (self.seri.getGripItemStatus() == False):
-                logger.error("Grip sensor is not working")
-                self.status["alert"]["gripcheck_not_working"] = True
-                self.status["step"] = 0
-                return
-            else:
-                logger.error(f"Grip sensor return unknown value: {self.seri.getGripItemStatus()}")
-                self.status["alert"]["gripcheck_not_working"] = True
-                self.status["step"] = 0
-                return
-            logger.debug("Checking grip sensor process finished")
-
+            self.gripSensor()
 
         elif step == 1: #Grab from the box
             self.status["alert"]["random_box_prediction"] = False
@@ -280,21 +267,29 @@ class ArmMane:
                         logger.debug(result)
                         if (self.status["sorting"] == 0) :
                             logger.debug("IN SHAPE")
-                            if result[1] == "Square":
-                                self.status["drop"] = 0
-                            elif result[1] == "Triangle":
-                                self.status["drop"] = 1
-                            elif result[1] == "Cylinder":
-                                self.status["drop"] = 2
+                            for i, shape in enumerate(self.status["shape"]):
+                                if result[1] == shape:
+                                    self.status["drop"] = i
+                                    break
+                            # if result[1] == "Square":
+                            #     self.status["drop"] = 0
+                            # elif result[1] == "Triangle":
+                            #     self.status["drop"] = 1
+                            # elif result[1] == "Cylinder":
+                            #     self.status["drop"] = 2
 
                         elif (self.status["sorting"] == 1) :
                             logger.debug("IN COLOR")
-                            if result[0] == "Red":
-                                self.status["drop"] = 0
-                            elif result[0] == "White":
-                                self.status["drop"] = 1
-                            elif result[0] == "Blue":
-                                self.status["drop"] = 2
+                            for i, color in enumerate(self.status["color"]):
+                                if result[0] == color:
+                                    self.status["drop"] = i
+                                    break
+                            # if result[0] == "Red":
+                            #     self.status["drop"] = 0
+                            # elif result[0] == "White":
+                            #     self.status["drop"] = 1
+                            # elif result[0] == "Blue":
+                            #     self.status["drop"] = 2
                         else : 
                             logger.debug("IN RANDOM")
                             self.status["alert"]["random_box_prediction"] = True
@@ -499,3 +494,23 @@ class ArmMane:
         self.status["alert"]["shuffle_currently"] = False
         #return random_pickup, random_dropbox
     
+    def gripSensor(self):
+        logger.debug("Checking grip sensor process started")
+        logger.debug("Trying to grip...")
+        self.stepControl(0.1)
+        time.sleep(1)
+        logger.debug("Checking if the grip sensor is working...")
+        if(self.seri.getGripItemStatus() == True):
+            logger.debug("Grip sensor is working")
+            self.status["alert"]["gripcheck_not_working"] = False
+        elif (self.seri.getGripItemStatus() == False):
+            logger.error("Grip sensor is not working")
+            self.status["alert"]["gripcheck_not_working"] = True
+            self.status["step"] = 0
+            return
+        else:
+            logger.error(f"Grip sensor return unknown value: {self.seri.getGripItemStatus()}")
+            self.status["alert"]["gripcheck_not_working"] = True
+            self.status["step"] = 0
+            return
+        logger.debug("Checking grip sensor process finished")

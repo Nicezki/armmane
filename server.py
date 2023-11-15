@@ -523,10 +523,6 @@ async def flag_not_stop_camera(status: bool):
         }
     )
 
-
-
-
-
 @app.post("/detect/start", tags=["Status"], description="Start object detection")
 async def detect_start():
     # Check if camera is available
@@ -560,6 +556,55 @@ async def detect_stop():
         }
     )
 
+@app.post("/test/servo/{servo}", tags=["Test"], description="Testing each servo")
+async def servo_test(servo: int):
+    # Check if servo is less than 0 or more than servo_count
+    if servo < 0 or servo > int(sys.app_config.get("servo_count")):
+        return JSONResponse(
+            status_code=404,
+            content={
+                "status": "error",
+                "message": "Servo must be between 0 and {}".format(sys.app_config.get("servo_count"))
+            }
+        )
+    seri.servoTest(servo)
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Test servo {}".format(servo)
+        }
+    )
+
+@app.post("/test/conv/{conv}", tags=["Test"], description="Testing each conveyor")
+async def conv_test(conv: int):
+    # Check if conv is less than 0 or more than conveyor_count
+    if conv < 0 or conv > int(sys.app_config.get("conveyor_count")):
+        return JSONResponse(
+            status_code=404,
+            content={
+                "status": "error",
+                "message": "Conv must be between 0 and {}".format(sys.app_config.get("conveyor_count"))
+            }
+        )
+    seri.convTest(conv)
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Test conv {}".format(conv)
+        }
+    )
+@app.post("/test/sensor/grip", tags=["Test"], description="Testing grip sensor")
+async def gripSensor():
+    # Check if servo is less than 0 or more than servo_count
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "Test arm grip sensor"
+        }
+    )
 
 @app.post("/item/{box}/{item}", tags=["Status"], description="Set item of box")
 async def item(box: int, item: int):
@@ -589,8 +634,6 @@ async def item(box: int, item: int):
             "message": "Set item of box {} to {}".format(box, item)
         }
     )
-
-
 
 async def event_generator(request: Request):
     last_seri_status = {}
