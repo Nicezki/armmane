@@ -499,15 +499,15 @@ async def camera():
         }
     )
 
-@app.post("/flag/not_stop_conveyor/toggle", tags=["Status"], description="Toggle not_stop_conveyor flag")
-async def flag_not_stop_conveyor_toggle():
-    # Toggle not_stop_conveyor flag
-    amn.status["flag"]["not_stop_conveyor"] = not amn.status["flag"]["not_stop_conveyor"]
+@app.post("/flag/not_stop_camera/toggle", tags=["Status"], description="Toggle not_stop_camera flag")
+async def flag_not_stop_camera_toggle():
+    # Toggle not_stop_camera flag
+    amn.status["flag"]["not_stop_camera"] = not amn.status["flag"]["not_stop_camera"]
     return JSONResponse(
         status_code=200,
         content={
             "status": "success",
-            "message": "Toggle not_stop_conveyor flag from {} to {}".format(not amn.status["flag"]["not_stop_conveyor"], amn.status["flag"]["not_stop_conveyor"])
+            "message": "Toggle not_stop_camera to {}".format(amn.status["flag"]["not_stop_camera"])
         }
     )
 
