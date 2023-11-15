@@ -37,9 +37,6 @@ class ArmMane:
                 "grip_failed_limit" : False,
                 "random_box_prediction" : False,
                 "ignore_conv_sensor" : False, # Can be used to ignore the conveyor sensor (Set to True to ignore the sensor)
-            },
-            "flag": {
-                "not_stop_camera": False,
             }
         }
 
@@ -278,7 +275,6 @@ class ArmMane:
                     if self.sysm.running["current_classes"] != None and self.sysm.running["current_classes"] != "":
                         result = self.sysm.running["current_classes"].split("_")
                         logger.debug(result)
-                        #TODO: Dynamic drop box : Set the drop box in the config file instead of hardcode
                         if (self.status["sorting"] == 0) :
                             logger.debug("IN SHAPE")
                             if result[1] == "Square":
@@ -347,15 +343,10 @@ class ArmMane:
                     logger.debug("Object detected, Stop detection and camera for better performance :)")
 
                 self.status["alert"]["not_recognize_object"] = False
-
-
                 # Stop the camera
-                if not self.status["flag"]["not_stop_camera"]:
-                    self.tfma.stopCamera()
-                    time.sleep(1)
-                    self.tfma.stopDetect()
-                    time.sleep(1)
-
+                self.tfma.stopDetect()
+                time.sleep(1)
+                self.tfma.stopCamera()
                 logger.debug("Proceed to next step")
                 self.stepControl(4.4) #Move the conveyor > Close gate > Stop the conveyor > Open gate
                 self.stepControl(4.2) # Prepre grip
